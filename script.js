@@ -199,32 +199,32 @@ function processSheetData(json) {
         const row = json.table.rows[i];
         console.log(`Processing row ${i}:`, row);
         
-        if (row.c && row.c.length >= 7) {
-            // Get product data
-            const id = row.c[0]?.v || `P${i}`;
-            const name = row.c[1]?.v || 'Produto';
-            const price = parseFloat(row.c[2]?.v) || 0;
-            const image = row.c[3]?.v || 'https://i.imgur.com/O7TC8aZ.png';
-            const description = row.c[4]?.v || 'Descrição do produto';
-            const sizes = row.c[5]?.v ? row.c[5].v.split(',').map(s => s.trim()) : ['P', 'M', 'G'];
-            const colors = row.c[6]?.v ? row.c[6].v.split(',').map(c => c.trim()) : ['Preto'];
+        if (row.c && row.c.length >= 6) {
+            // Get product data (sem ID)
+            const name = row.c[0]?.v || 'Produto';
+            const price = parseFloat(row.c[1]?.v) || 0;
+            const image = row.c[2]?.v || 'https://i.imgur.com/O7TC8aZ.png';
+            const description = row.c[3]?.v || 'Descrição do produto';
+            const sizes = row.c[4]?.v ? row.c[4].v.split(',').map(s => s.trim()) : ['P', 'M', 'G'];
+            const colors = row.c[5]?.v ? row.c[5].v.split(',').map(c => c.trim()) : ['Preto'];
             
-            // Determine category from ID
+            // Determine category from product name
             let category = 'vestido'; // default
-            if (id.startsWith('VEST')) category = 'vestido';
-            else if (id.startsWith('CONJ')) category = 'conjunto';
-            else if (id.startsWith('TSH')) category = 'tshirt';
-            else if (id.startsWith('MAC')) category = 'macacao';
-            else if (id.startsWith('BLU')) category = 'blusa';
-            else if (id.startsWith('CAM')) category = 'camisa';
-            else if (id.startsWith('SJ')) category = 'saia-jeans';
-            else if (id.startsWith('SS')) category = 'saia-social';
-            else if (id.startsWith('CAL')) category = 'calca';
-            else if (id.startsWith('PIJ')) category = 'pijama';
+            const nameLower = name.toLowerCase();
+            if (nameLower.includes('vestido')) category = 'vestido';
+            else if (nameLower.includes('conjunto')) category = 'conjunto';
+            else if (nameLower.includes('t-shirt') || nameLower.includes('camiseta')) category = 'tshirt';
+            else if (nameLower.includes('macacão') || nameLower.includes('macacao')) category = 'macacao';
+            else if (nameLower.includes('blusa')) category = 'blusa';
+            else if (nameLower.includes('camisa')) category = 'camisa';
+            else if (nameLower.includes('saia jeans') || nameLower.includes('saia-jeans')) category = 'saia-jeans';
+            else if (nameLower.includes('saia social') || nameLower.includes('saia-social')) category = 'saia-social';
+            else if (nameLower.includes('calça') || nameLower.includes('calca')) category = 'calca';
+            else if (nameLower.includes('pijama')) category = 'pijama';
             
             // Create product object
             const product = {
-                id: id,
+                id: `P${i}`, // ID automático
                 name: name,
                 price: price,
                 image: image,
