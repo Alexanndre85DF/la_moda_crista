@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - La Moda Cristã</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            margin-top: 100px;
+        }
+        
+        .admin-header {
+            background: linear-gradient(135deg, #d4a5c7 0%, #c896b8 50%, #b887a9 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .admin-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-family: 'Bodoni Moda', 'Times New Roman', serif;
+        }
+        
+        .admin-actions {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-admin {
+            background: linear-gradient(135deg, #d4a5c7 0%, #c896b8 50%, #b887a9 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-admin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 165, 199, 0.4);
+        }
+        
+        .btn-admin.secondary {
+            background: #6c757d;
+        }
+        
+        .btn-admin.danger {
+            background: #dc3545;
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .product-card-admin {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .product-card-admin img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .product-card-admin h3 {
+            color: #8b5a7a;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .product-card-admin p {
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .product-card-admin .price {
+            color: #d4a5c7;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            border-radius: 5px;
+        }
+        
+        .form-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .form-modal.active {
+            display: flex;
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #8b5a7a;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #d4a5c7;
+        }
+        
+        .form-group textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8b5a7a;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="img/moda.jpeg" alt="La Moda Cristã Logo">
+            </div>
+            <nav class="nav">
+                <ul>
+                    <li><a href="index.html">Voltar ao Site</a></li>
+                    <li><a href="#products">Produtos</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>Painel Administrativo</h1>
+            <p>Gerencie os produtos da La Moda Cristã</p>
+        </div>
+
+        <div class="admin-actions">
+            <button class="btn-admin" onclick="openAddProductModal()">
+                <i class="fas fa-plus"></i>
+                Adicionar Produto
+            </button>
+            <button class="btn-admin secondary" onclick="loadProductsFromFirebase()">
+                <i class="fas fa-sync"></i>
+                Atualizar Lista
+            </button>
+            <button class="btn-admin danger" onclick="clearAllProducts()">
+                <i class="fas fa-trash"></i>
+                Limpar Todos
+            </button>
+        </div>
+
+        <div id="statusMessage" class="status-message" style="display: none;"></div>
+
+        <div id="productsContainer">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                Carregando produtos...
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div class="form-modal" id="productModal">
+        <div class="form-container">
+            <h2 id="modalTitle">Adicionar Produto</h2>
+            
+            <form id="productForm">
+                <div class="form-group">
+                    <label for="productName">Nome do Produto</label>
+                    <input type="text" id="productName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productPrice">Preço (R$)</label>
+                    <input type="number" id="productPrice" step="0.01" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productImage">URL da Imagem</label>
+                    <input type="url" id="productImage" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productDescription">Descrição</label>
+                    <textarea id="productDescription" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productCategory">Categoria</label>
+                    <select id="productCategory" required>
+                        <option value="">Selecione uma categoria</option>
+                        <option value="vestido">Vestido</option>
+                        <option value="conjunto">Conjunto</option>
+                        <option value="tshirt">T-Shirt</option>
+                        <option value="macacao">Macacão</option>
+                        <option value="blusa">Blusa</option>
+                        <option value="camisa">Camisa</option>
+                        <option value="saia-jeans">Saia Jeans</option>
+                        <option value="saia-social">Saia Social</option>
+                        <option value="calca">Calça</option>
+                        <option value="pijama">Pijama</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productSizes">Tamanhos (separados por vírgula)</label>
+                    <input type="text" id="productSizes" placeholder="P, M, G, GG" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="productColors">Cores (separadas por vírgula)</label>
+                    <input type="text" id="productColors" placeholder="Preto, Branco, Rosa" required>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn-admin" style="flex: 1;">
+                        <i class="fas fa-save"></i>
+                        Salvar
+                    </button>
+                    <button type="button" class="btn-admin secondary" onclick="closeProductModal()" style="flex: 1;">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="firebase-config.js"></script>
+    <script>
+        let products = [];
+        let editingProductId = null;
+
+        // Initialize admin
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProductsFromFirebase();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            const form = document.getElementById('productForm');
+            form.addEventListener('submit', handleProductSubmit);
+        }
+
+        async function loadProductsFromFirebase() {
+            try {
+                showStatus('Carregando produtos...', 'info');
+                
+                if (typeof window.firebase === 'undefined') {
+                    setTimeout(loadProductsFromFirebase, 100);
+                    return;
+                }
+
+                const { getDocs, collection } = window.firebase;
+                const productsSnapshot = await getDocs(collection(window.firebase.db, 'products'));
+                
+                products = [];
+                productsSnapshot.forEach(doc => {
+                    products.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                displayProducts();
+                showStatus(`${products.length} produtos carregados com sucesso!`, 'success');
+                
+            } catch (error) {
+                console.error('Erro ao carregar produtos:', error);
+                showStatus('Erro ao carregar produtos: ' + error.message, 'error');
+            }
+        }
+
+        function displayProducts() {
+            const container = document.getElementById('productsContainer');
+            
+            if (products.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #8b5a7a;">
+                        <i class="fas fa-box-open" style="font-size: 3rem; margin-bottom: 20px;"></i>
+                        <h3>Nenhum produto encontrado</h3>
+                        <p>Clique em "Adicionar Produto" para começar</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="products-grid">
+                    ${products.map(product => `
+                        <div class="product-card-admin">
+                            <img src="${product.image}" alt="${product.name}" onerror="this.src='https://via.placeholder.com/300x200?text=Imagem+Não+Encontrada'">
+                            <h3>${product.name}</h3>
+                            <p><strong>Categoria:</strong> ${product.category}</p>
+                            <p><strong>Descrição:</strong> ${product.description}</p>
+                            <p><strong>Tamanhos:</strong> ${product.sizes.join(', ')}</p>
+                            <p><strong>Cores:</strong> ${product.colors.join(', ')}</p>
+                            <p class="price">R$ ${product.price.toFixed(2)}</p>
+                            <div class="product-actions">
+                                <button class="btn-admin btn-small" onclick="editProduct('${product.id}')">
+                                    <i class="fas fa-edit"></i>
+                                    Editar
+                                </button>
+                                <button class="btn-admin btn-small danger" onclick="deleteProduct('${product.id}')">
+                                    <i class="fas fa-trash"></i>
+                                    Excluir
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function openAddProductModal() {
+            editingProductId = null;
+            document.getElementById('modalTitle').textContent = 'Adicionar Produto';
+            document.getElementById('productForm').reset();
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function editProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            editingProductId = productId;
+            document.getElementById('modalTitle').textContent = 'Editar Produto';
+            
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productPrice').value = product.price;
+            document.getElementById('productImage').value = product.image;
+            document.getElementById('productDescription').value = product.description;
+            document.getElementById('productCategory').value = product.category;
+            document.getElementById('productSizes').value = product.sizes.join(', ');
+            document.getElementById('productColors').value = product.colors.join(', ');
+            
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.remove('active');
+            editingProductId = null;
+        }
+
+        async function handleProductSubmit(e) {
+            e.preventDefault();
+            
+            try {
+                const productData = {
+                    name: document.getElementById('productName').value,
+                    price: parseFloat(document.getElementById('productPrice').value),
+                    image: document.getElementById('productImage').value,
+                    description: document.getElementById('productDescription').value,
+                    category: document.getElementById('productCategory').value,
+                    sizes: document.getElementById('productSizes').value.split(',').map(s => s.trim()),
+                    colors: document.getElementById('productColors').value.split(',').map(c => c.trim()),
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                };
+
+                if (editingProductId) {
+                    // Update existing product
+                    const { updateDoc, doc } = window.firebase;
+                    await updateDoc(doc(window.firebase.db, 'products', editingProductId), productData);
+                    showStatus('Produto atualizado com sucesso!', 'success');
+                } else {
+                    // Add new product
+                    const { addDoc, collection } = window.firebase;
+                    await addDoc(collection(window.firebase.db, 'products'), productData);
+                    showStatus('Produto adicionado com sucesso!', 'success');
+                }
+
+                closeProductModal();
+                loadProductsFromFirebase();
+                
+            } catch (error) {
+                console.error('Erro ao salvar produto:', error);
+                showStatus('Erro ao salvar produto: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteProduct(productId) {
+            if (!confirm('Tem certeza que deseja excluir este produto?')) return;
+
+            try {
+                const { deleteDoc, doc } = window.firebase;
+                await deleteDoc(doc(window.firebase.db, 'products', productId));
+                showStatus('Produto excluído com sucesso!', 'success');
+                loadProductsFromFirebase();
+            } catch (error) {
+                console.error('Erro ao excluir produto:', error);
+                showStatus('Erro ao excluir produto: ' + error.message, 'error');
+            }
+        }
+
+        async function clearAllProducts() {
+            if (!confirm('Tem certeza que deseja excluir TODOS os produtos? Esta ação não pode ser desfeita!')) return;
+
+            try {
+                const { getDocs, collection, deleteDoc, doc } = window.firebase;
+                const productsSnapshot = await getDocs(collection(window.firebase.db, 'products'));
+                
+                const deletePromises = [];
+                productsSnapshot.forEach(docSnapshot => {
+                    deletePromises.push(deleteDoc(doc(window.firebase.db, 'products', docSnapshot.id)));
+                });
+
+                await Promise.all(deletePromises);
+                showStatus('Todos os produtos foram excluídos!', 'success');
+                loadProductsFromFirebase();
+                
+            } catch (error) {
+                console.error('Erro ao limpar produtos:', error);
+                showStatus('Erro ao limpar produtos: ' + error.message, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message ${type}`;
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

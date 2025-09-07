@@ -93,10 +93,15 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script type="module" src="firebase-config.js"></script>
     <script src="script.js"></script>
     <script>
         // Load products for this category
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Aguardar os produtos carregarem primeiro
+            await loadProducts();
+            // Depois carregar a categoria específica
             loadCategoryProducts('camisa');
         });
     </script>

@@ -1,6 +1,12 @@
 // Global variables
-let cart = [];
+// Load cart from localStorage or initialize empty
+let cart = JSON.parse(localStorage.getItem('laModaCristaCart')) || [];
 let products = {};
+
+// Function to save cart to localStorage
+function saveCart() {
+    localStorage.setItem('laModaCristaCart', JSON.stringify(cart));
+}
 
 // Function to load products for a specific category page
 function loadCategoryProducts(category) {
@@ -31,7 +37,7 @@ function createProductCard(product) {
     card.className = 'product-card';
     card.innerHTML = `
         <div class="product-image">
-            <img src="${product.image}" alt="${product.name}" onclick="openProductModal('${product.id}')">
+            <img src="${product.image}" alt="${product.name}" onclick="openImageZoom('${product.image}', '${product.name}')" style="cursor: pointer;">
         </div>
         <div class="product-card-info">
             <h3>${product.name}</h3>
@@ -74,6 +80,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Initialize app safely
         console.log('Initializing app...');
         initializeApp();
+        
+        // Initialize cart display
+        updateCartDisplay();
         
         // Load products
         console.log('Loading products...');
@@ -147,12 +156,71 @@ function initializeApp() {
     console.log('App initialized successfully');
 }
 
-// Load products - ADMIN + GOOGLE SHEETS
+// Load products - FIREBASE + ADMIN + GOOGLE SHEETS
 async function loadProducts() {
     console.log('Loading products...');
     
     try {
-        // Primeiro: tentar carregar do admin (localStorage)
+        // Primeiro: tentar carregar do Firebase
+        // Aguardar o Firebase estar disponível
+        let firebaseReady = false;
+        let attempts = 0;
+        const maxAttempts = 100; // 10 segundos máximo
+        
+        while (!firebaseReady && attempts < maxAttempts) {
+            if (typeof window.firebase !== 'undefined') {
+                firebaseReady = true;
+                console.log('Firebase is ready!');
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+        }
+        
+        if (firebaseReady) {
+            console.log('Trying to load from Firebase...');
+            try {
+                const { getDocs, collection } = window.firebase;
+                const productsSnapshot = await getDocs(collection(window.firebase.db, 'products'));
+                
+                console.log('Firebase snapshot size:', productsSnapshot.size);
+                console.log('Firebase snapshot empty?', productsSnapshot.empty);
+                
+                if (!productsSnapshot.empty) {
+                    products = {};
+                    productsSnapshot.forEach(doc => {
+                        const productData = doc.data();
+                        const category = productData.category || 'vestido';
+                        
+                        console.log(`Product: ${productData.name}, Category: ${category}`);
+                        
+                        if (!products[category]) {
+                            products[category] = [];
+                        }
+                        
+                        products[category].push({
+                            id: doc.id,
+                            name: productData.name,
+                            price: productData.price,
+                            image: productData.image,
+                            description: productData.description,
+                            sizes: productData.sizes || ['P', 'M', 'G'],
+                            colors: productData.colors || ['Preto']
+                        });
+                    });
+                    console.log('Products loaded from Firebase:', products);
+                    return;
+                } else {
+                    console.log('No products found in Firebase');
+                }
+            } catch (firebaseError) {
+                console.log('Firebase error:', firebaseError);
+            }
+        } else {
+            console.log('Firebase not available after waiting');
+        }
+        
+        // Segundo: tentar carregar do admin (localStorage)
         const adminProducts = localStorage.getItem('laModaCristaProducts');
         if (adminProducts) {
             products = JSON.parse(adminProducts);
@@ -160,8 +228,9 @@ async function loadProducts() {
             return;
         }
         
-        // Se não tiver do admin, tentar Google Sheets
+        // Terceiro: tentar Google Sheets
         console.log('No admin products found, trying Google Sheets...');
+        console.log('WARNING: This will override Firebase data!');
         const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1YF7pYBBAqYoUQQc9hzrAAWcWXKjWxKb59sHYcrNxox4/gviz/tq?tqx=out:json';
         
         const response = await fetch(spreadsheetUrl);
@@ -227,7 +296,7 @@ function processSheetData(json) {
             const nameLower = name.toLowerCase();
             if (nameLower.includes('vestido')) category = 'vestido';
             else if (nameLower.includes('conjunto')) category = 'conjunto';
-            else if (nameLower.includes('t-shirt') || nameLower.includes('camiseta')) category = 'tshirt';
+            else if (nameLower.includes('t-shirt') || nameLower.includes('camiseta') || nameLower.includes('tshirt')) category = 'tshirt';
             else if (nameLower.includes('macacão') || nameLower.includes('macacao')) category = 'macacao';
             else if (nameLower.includes('blusa')) category = 'blusa';
             else if (nameLower.includes('camisa')) category = 'camisa';
@@ -281,13 +350,41 @@ function addToCart(productId) {
     
     // Find product in all categories
     let product = null;
+    let productCategory = null;
     for (const category in products) {
         product = products[category].find(p => p.id === productId);
-        if (product) break;
+        if (product) {
+            productCategory = category;
+            break;
+        }
     }
     
     if (product) {
-        cart.push(product);
+        // Create cart item with all product information
+        const cartItem = {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            image: product.image,
+            sizes: product.sizes,
+            colors: product.colors,
+            category: productCategory,
+            quantity: 1
+        };
+        
+        // Check if item already exists in cart
+        const existingItemIndex = cart.findIndex(item => item.id === productId);
+        
+        if (existingItemIndex > -1) {
+            // Increase quantity
+            cart[existingItemIndex].quantity += 1;
+        } else {
+            // Add new item
+            cart.push(cartItem);
+        }
+        
+        saveCart(); // Save to localStorage
         updateCartDisplay();
         console.log('Product added to cart:', product.name);
     }
@@ -302,26 +399,45 @@ function updateCartDisplay() {
     const cartItems = document.getElementById('cartItems');
     if (cartItems) {
         cartItems.innerHTML = '';
-        cart.forEach(item => {
-            const cartItem = document.createElement('div');
-            cartItem.className = 'cart-item';
-            cartItem.innerHTML = `
-                <img src="${item.image}" alt="${item.name}">
-                <div class="cart-item-info">
-                    <h4>${item.name}</h4>
-                    <p>R$ ${item.price.toFixed(2)}</p>
-                </div>
-                <button onclick="removeFromCart('${item.id}')">×</button>
-            `;
-            cartItems.appendChild(cartItem);
-        });
+        
+        if (cart.length === 0) {
+            cartItems.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Carrinho vazio</p>';
+        } else {
+            cart.forEach((item, index) => {
+                const cartItem = document.createElement('div');
+                cartItem.className = 'cart-item';
+                cartItem.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}">
+                    <div class="cart-item-info">
+                        <h4>${item.name}</h4>
+                        <p class="cart-item-description">${item.description}</p>
+                        <p class="cart-item-details">
+                            <strong>Categoria:</strong> ${item.category}<br>
+                            <strong>Tamanhos:</strong> ${item.sizes.join(', ')}<br>
+                            <strong>Cores:</strong> ${item.colors.join(', ')}<br>
+                            <strong>Quantidade:</strong> ${item.quantity}
+                        </p>
+                        <p class="cart-item-price">R$ ${item.price.toFixed(2)}</p>
+                    </div>
+                    <button onclick="removeFromCart(${index})">×</button>
+                `;
+                cartItems.appendChild(cartItem);
+            });
+        }
+    }
+    
+    // Calculate and update total
+    const cartTotal = document.getElementById('cartTotal');
+    if (cartTotal) {
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        cartTotal.textContent = total.toFixed(2).replace('.', ',');
     }
 }
 
-function removeFromCart(productId) {
-    const index = cart.findIndex(item => item.id === productId);
-    if (index > -1) {
+function removeFromCart(index) {
+    if (index >= 0 && index < cart.length) {
         cart.splice(index, 1);
+        saveCart(); // Save to localStorage
         updateCartDisplay();
     }
 }
@@ -332,23 +448,145 @@ function checkout() {
         return;
     }
     
-    let message = '🛍️ *Nova Compra - La Moda Cristã*\n\n';
-    let total = 0;
+    let message = '🛍️ *PEDIDO - LA MODA CRISTÃ*\n\n';
+    message += 'Olá! Gostaria de fazer um pedido:\n\n';
     
-    cart.forEach(item => {
-        message += `• ${item.name}\n`;
-        message += `   Preço: R$ ${item.price.toFixed(2)}\n\n`;
-        total += item.price;
+    let total = 0;
+    cart.forEach((item, index) => {
+        message += `*${index + 1}. ${item.name}*\n`;
+        message += `📝 Descrição: ${item.description}\n`;
+        message += `🏷️ Categoria: ${item.category}\n`;
+        message += `📏 Tamanhos: ${item.sizes.join(', ')}\n`;
+        message += `🎨 Cores: ${item.colors.join(', ')}\n`;
+        message += `🔢 Quantidade: ${item.quantity}\n`;
+        message += `💰 Preço: R$ ${item.price.toFixed(2)}\n`;
+        message += `💰 Subtotal: R$ ${(item.price * item.quantity).toFixed(2)}\n\n`;
+        
+        total += item.price * item.quantity;
     });
     
-    message += `💰 *Total: R$ ${total.toFixed(2)}*\n\n`;
-    message += 'Por favor, confirme os itens e finalize o pedido!';
+    message += `*TOTAL: R$ ${total.toFixed(2)}*\n\n`;
+    message += 'Por favor, confirme a disponibilidade e me informe sobre o pagamento e entrega.\n';
+    message += 'Obrigada! 🙏';
     
     const whatsappUrl = `https://wa.me/5563992271991?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
 }
 
 // Product modal functions
+// Image zoom modal functions
+function openImageZoom(imageSrc, productName) {
+    // Create image zoom modal
+    const imageModal = document.createElement('div');
+    imageModal.className = 'image-zoom-modal';
+    imageModal.innerHTML = `
+        <button class="close-image-zoom" onclick="closeImageZoom()">
+            <i class="fas fa-times"></i>
+        </button>
+        <img src="${imageSrc}" alt="${productName}" class="zoomed-image">
+        <div class="image-zoom-info">
+            <h3>${productName}</h3>
+        </div>
+    `;
+    
+    document.body.appendChild(imageModal);
+    
+    // Add styles
+    imageModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    const closeBtn = imageModal.querySelector('.close-image-zoom');
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        transition: all 0.3s ease;
+        z-index: 10001;
+    `;
+    
+    const img = imageModal.querySelector('.zoomed-image');
+    img.style.cssText = `
+        width: 100vw;
+        height: 100vh;
+        object-fit: contain;
+        object-position: center;
+    `;
+    
+    const info = imageModal.querySelector('.image-zoom-info');
+    info.style.cssText = `
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        text-align: center;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 10px 20px;
+        border-radius: 25px;
+        backdrop-filter: blur(10px);
+    `;
+    
+    info.querySelector('h3').style.cssText = `
+        font-size: 1.5rem;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    `;
+    
+    // Close on click outside
+    imageModal.addEventListener('click', (e) => {
+        if (e.target === imageModal) {
+            closeImageZoom();
+        }
+    });
+    
+    // Add hover effect to close button
+    closeBtn.addEventListener('mouseenter', () => {
+        closeBtn.style.background = 'rgba(255, 68, 68, 0.8)';
+        closeBtn.style.transform = 'scale(1.1)';
+    });
+    
+    closeBtn.addEventListener('mouseleave', () => {
+        closeBtn.style.background = 'rgba(0, 0, 0, 0.7)';
+        closeBtn.style.transform = 'scale(1)';
+    });
+    
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeImageZoom();
+        }
+    });
+}
+
+function closeImageZoom() {
+    const modal = document.querySelector('.image-zoom-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
 function openProductModal(productId) {
     let product = null;
     for (const category in products) {
