@@ -42,10 +42,20 @@ function createProductCard(product) {
         <div class="product-card-info">
             <h3>${product.name}</h3>
             <p class="product-description">${product.description}</p>
-            <p class="product-sizes"><strong>Tamanhos:</strong> ${product.sizes.join(', ')}</p>
             <p class="product-colors"><strong>Cores:</strong> ${product.colors.join(', ')}</p>
             <p class="price">R$ ${product.price.toFixed(2)}</p>
-            <button class="btn-add-cart" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
+            
+            <div class="size-selection">
+                <label for="size-${product.id}"><strong>Selecione o tamanho:</strong></label>
+                <select id="size-${product.id}" class="size-dropdown" onchange="enableAddToCart('${product.id}')">
+                    <option value="">Escolha um tamanho</option>
+                    ${product.sizes.map(size => `<option value="${size}">${size}</option>`).join('')}
+                </select>
+            </div>
+            
+            <button class="btn-add-cart" id="btn-${product.id}" onclick="addToCart('${product.id}')" disabled>
+                Selecione um tamanho
+            </button>
         </div>
     `;
     return card;
@@ -56,25 +66,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded, starting app...');
     
     try {
-        // Splash screen logic
+        // Splash screen logic - only on first visit
         const hasVisited = sessionStorage.getItem('hasVisited');
+        const splashScreen = document.getElementById('splashScreen');
         
-        if (!hasVisited) {
+        if (!hasVisited && splashScreen) {
+            // First visit - show splash screen
             setTimeout(() => {
-                const splashScreen = document.getElementById('splashScreen');
-                if (splashScreen) {
-                    splashScreen.classList.add('fade-out');
-                    setTimeout(() => {
-                        splashScreen.style.display = 'none';
-                    }, 500);
-                }
-            }, 3000);
+                splashScreen.classList.add('fade-out');
+                setTimeout(() => {
+                    splashScreen.style.display = 'none';
+                }, 500);
+            }, 2000);
             sessionStorage.setItem('hasVisited', 'true');
-        } else {
-            const splashScreen = document.getElementById('splashScreen');
-            if (splashScreen) {
-                splashScreen.style.display = 'none';
-            }
+        } else if (splashScreen) {
+            // Already visited - hide immediately
+            splashScreen.style.display = 'none';
         }
 
         // Initialize app safely
@@ -345,8 +352,32 @@ function closeCartSidebar() {
     }
 }
 
+// Enable add to cart button when size is selected
+function enableAddToCart(productId) {
+    const sizeSelect = document.getElementById(`size-${productId}`);
+    const addButton = document.getElementById(`btn-${productId}`);
+    
+    if (sizeSelect.value) {
+        addButton.disabled = false;
+        addButton.textContent = 'Adicionar ao Carrinho';
+        addButton.classList.remove('disabled');
+    } else {
+        addButton.disabled = true;
+        addButton.textContent = 'Selecione um tamanho';
+        addButton.classList.add('disabled');
+    }
+}
+
 function addToCart(productId) {
     console.log('Adding to cart:', productId);
+    
+    const sizeSelect = document.getElementById(`size-${productId}`);
+    const selectedSize = sizeSelect.value;
+    
+    if (!selectedSize) {
+        alert('Por favor, selecione um tamanho antes de adicionar ao carrinho.');
+        return;
+    }
     
     // Find product in all categories
     let product = null;
@@ -367,14 +398,15 @@ function addToCart(productId) {
             description: product.description,
             price: product.price,
             image: product.image,
+            size: selectedSize,
             sizes: product.sizes,
             colors: product.colors,
             category: productCategory,
             quantity: 1
         };
         
-        // Check if item already exists in cart
-        const existingItemIndex = cart.findIndex(item => item.id === productId);
+        // Check if item with same size already exists in cart
+        const existingItemIndex = cart.findIndex(item => item.id === productId && item.size === selectedSize);
         
         if (existingItemIndex > -1) {
             // Increase quantity
@@ -386,8 +418,74 @@ function addToCart(productId) {
         
         saveCart(); // Save to localStorage
         updateCartDisplay();
+        showAddToCartSuccess(product.name, selectedSize);
         console.log('Product added to cart:', product.name);
     }
+}
+
+// Show success message when item is added to cart
+function showAddToCartSuccess(productName, size) {
+    // Create success message element
+    const successMsg = document.createElement('div');
+    successMsg.className = 'add-to-cart-success';
+    successMsg.innerHTML = `
+        <div class="success-content">
+            <i class="fas fa-check-circle"></i>
+            <span>${productName} (Tamanho: ${size}) adicionado ao carrinho!</span>
+        </div>
+    `;
+    
+    // Add styles
+    successMsg.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        z-index: 1000;
+        animation: slideInRight 0.3s ease-out;
+        max-width: 300px;
+    `;
+    
+    // Add animation styles
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .add-to-cart-success .success-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .add-to-cart-success .success-content i {
+            font-size: 1.2rem;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Add to page
+    document.body.appendChild(successMsg);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        successMsg.style.animation = 'slideInRight 0.3s ease-out reverse';
+        setTimeout(() => {
+            if (successMsg.parentNode) {
+                successMsg.parentNode.removeChild(successMsg);
+            }
+        }, 300);
+    }, 3000);
 }
 
 function updateCartDisplay() {
@@ -413,7 +511,7 @@ function updateCartDisplay() {
                         <p class="cart-item-description">${item.description}</p>
                         <p class="cart-item-details">
                             <strong>Categoria:</strong> ${item.category}<br>
-                            <strong>Tamanhos:</strong> ${item.sizes.join(', ')}<br>
+                            <strong>Tamanho selecionado:</strong> ${item.size}<br>
                             <strong>Cores:</strong> ${item.colors.join(', ')}<br>
                             <strong>Quantidade:</strong> ${item.quantity}
                         </p>
@@ -456,7 +554,7 @@ function checkout() {
         message += `*${index + 1}. ${item.name}*\n`;
         message += `📝 Descrição: ${item.description}\n`;
         message += `🏷️ Categoria: ${item.category}\n`;
-        message += `📏 Tamanhos: ${item.sizes.join(', ')}\n`;
+        message += `📏 Tamanho selecionado: ${item.size}\n`;
         message += `🎨 Cores: ${item.colors.join(', ')}\n`;
         message += `🔢 Quantidade: ${item.quantity}\n`;
         message += `💰 Preço: R$ ${item.price.toFixed(2)}\n`;

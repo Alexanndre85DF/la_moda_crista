@@ -750,6 +750,39 @@ body {
     box-shadow: 0 4px 12px rgba(212, 165, 199, 0.3);
 }
 
+.size-selection {
+    margin: 15px 0;
+}
+
+.size-selection label {
+    display: block;
+    margin-bottom: 8px;
+    color: #8b5a7a;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.size-dropdown {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #8b5a7a;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.size-dropdown:focus {
+    outline: none;
+    border-color: #d4a5c7;
+}
+
+.size-dropdown option {
+    padding: 8px;
+}
+
 .btn-add-cart {
     background: linear-gradient(135deg, #d4a5c7 0%, #c896b8 50%, #b887a9 100%);
     color: white;
@@ -764,10 +797,24 @@ body {
     box-shadow: 0 4px 15px rgba(212, 165, 199, 0.3);
 }
 
-.btn-add-cart:hover {
+.btn-add-cart:hover:not(:disabled) {
     background: linear-gradient(135deg, #c896b8 0%, #b887a9 50%, #a6789a 100%);
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(212, 165, 199, 0.4);
+}
+
+.btn-add-cart:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-add-cart.disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 /* Category Modal Content */
@@ -1291,7 +1338,7 @@ body {
     }
     
     .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
         padding: 1.5rem;
     }
@@ -1386,7 +1433,7 @@ body {
     }
     
     .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
         gap: 1rem;
         padding: 1rem;
     }
