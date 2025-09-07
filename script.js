@@ -84,6 +84,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             loadCategoryProducts(category);
         }
         
+        // Listen for admin updates
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'laModaCristaProducts') {
+                console.log('Admin products updated, reloading...');
+                loadProducts().then(() => {
+                    if (category) {
+                        loadCategoryProducts(category);
+                    }
+                });
+            }
+        });
+        
         console.log('App initialization complete!');
     } catch (error) {
         console.error('Error during initialization:', error);
@@ -132,42 +144,37 @@ function initializeApp() {
     console.log('App initialized successfully');
 }
 
-// Load products - GOOGLE SHEETS SIMPLES E FUNCIONAL
+// Load products - ADMIN + GOOGLE SHEETS
 async function loadProducts() {
-    console.log('Loading products from Google Sheets...');
+    console.log('Loading products...');
     
     try {
-        // URL da planilha - SIMPLES E DIRETO
+        // Primeiro: tentar carregar do admin (localStorage)
+        const adminProducts = localStorage.getItem('laModaCristaProducts');
+        if (adminProducts) {
+            products = JSON.parse(adminProducts);
+            console.log('Products loaded from admin:', products);
+            return;
+        }
+        
+        // Se não tiver do admin, tentar Google Sheets
+        console.log('No admin products found, trying Google Sheets...');
         const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1YF7pYBBAqYoUQQc9hzrAAWcWXKjWxKb59sHYcrNxox4/gviz/tq?tqx=out:json';
         
-        console.log('Fetching from:', spreadsheetUrl);
-        
         const response = await fetch(spreadsheetUrl);
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (response.ok) {
+            const text = await response.text();
+            const json = JSON.parse(text.substring(47, text.length - 2));
+            
+            if (json.table && json.table.rows) {
+                products = processSheetData(json);
+                console.log('Products loaded from Google Sheets:', products);
+                return;
+            }
         }
-        
-        const text = await response.text();
-        console.log('Raw response length:', text.length);
-        
-        // Parse JSON response
-        const json = JSON.parse(text.substring(47, text.length - 2));
-        console.log('Parsed JSON:', json);
-        
-        if (json.table && json.table.rows) {
-            products = processSheetData(json);
-            console.log('Products processed successfully:', products);
-        } else {
-            throw new Error('No data found in spreadsheet');
-        }
-        
-    } catch (error) {
-        console.error('Error loading from Google Sheets:', error);
-        console.log('Using fallback products...');
         
         // Fallback: produtos básicos
+        console.log('Using fallback products...');
         products = {
             vestido: [
                 {
@@ -181,6 +188,10 @@ async function loadProducts() {
                 }
             ]
         };
+        
+    } catch (error) {
+        console.error('Error loading products:', error);
+        products = {};
     }
 }
 
