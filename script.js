@@ -36,6 +36,8 @@ function createProductCard(product) {
         <div class="product-card-info">
             <h3>${product.name}</h3>
             <p class="product-description">${product.description}</p>
+            <p class="product-sizes"><strong>Tamanhos:</strong> ${product.sizes.join(', ')}</p>
+            <p class="product-colors"><strong>Cores:</strong> ${product.colors.join(', ')}</p>
             <p class="price">R$ ${product.price.toFixed(2)}</p>
             <button class="btn-add-cart" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
         </div>
