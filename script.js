@@ -33,9 +33,10 @@ function createProductCard(product) {
         <div class="product-image">
             <img src="${product.image}" alt="${product.name}" onclick="openProductModal('${product.id}')">
         </div>
-        <div class="product-info">
+        <div class="product-card-info">
             <h3>${product.name}</h3>
-            <p class="product-price">R$ ${product.price.toFixed(2)}</p>
+            <p class="product-description">${product.description}</p>
+            <p class="price">R$ ${product.price.toFixed(2)}</p>
             <button class="btn-add-cart" onclick="addToCart('${product.id}')">Adicionar ao Carrinho</button>
         </div>
     `;
