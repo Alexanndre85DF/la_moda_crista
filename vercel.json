@@ -3,6 +3,21 @@
     {
       "source": "/admin",
       "destination": "/admin-firebase.html"
+    },
+    {
+      "source": "/admin-firebase.html",
+      "destination": "/admin-firebase.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/admin-firebase.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
     }
   ]
 }
