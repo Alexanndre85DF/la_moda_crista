@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - La Moda Cristã</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .admin-header {
+            background: linear-gradient(135deg, #e91e63, #9c27b0);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .admin-header h1 {
+            font-family: 'Bodoni Moda', serif;
+            font-size: 2.5rem;
+            margin: 0;
+        }
+        
+        .admin-header p {
+            font-size: 1.1rem;
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .admin-tab {
+            background: white;
+            border: 2px solid #e91e63;
+            color: #e91e63;
+            padding: 15px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .admin-tab.active {
+            background: #e91e63;
+            color: white;
+        }
+        
+        .admin-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(233, 30, 99, 0.3);
+        }
+        
+        .admin-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .product-form {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #e91e63;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .btn-save {
+            background: linear-gradient(135deg, #e91e63, #9c27b0);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(233, 30, 99, 0.4);
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .product-card-admin {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .product-card-admin:hover {
+            border-color: #e91e63;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .product-image-admin {
+            width: 100%;
+            height: 200px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .product-image-admin img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .product-info-admin h3 {
+            color: #333;
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+        }
+        
+        .product-info-admin p {
+            color: #666;
+            margin: 5px 0;
+        }
+        
+        .product-price-admin {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #e91e63;
+            margin: 10px 0;
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-edit {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-delete {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-edit:hover,
+        .btn-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #e91e63, #9c27b0);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            font-size: 2rem;
+            margin: 0 0 10px 0;
+        }
+        
+        .stat-card p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .success-message {
+            background: #4caf50;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .error-message {
+            background: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .admin-tabs {
+                justify-content: center;
+            }
+            
+            .admin-header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>🛍️ Painel Administrativo</h1>
+            <p>Gerencie os produtos da La Moda Cristã</p>
+        </div>
+        
+        <div class="admin-tabs">
+            <div class="admin-tab active" onclick="showTab('dashboard')">📊 Dashboard</div>
+            <div class="admin-tab" onclick="showTab('add-product')">➕ Adicionar Produto</div>
+            <div class="admin-tab" onclick="showTab('manage-products')">📦 Gerenciar Produtos</div>
+        </div>
+        
+        <div class="admin-content">
+            <!-- Dashboard -->
+            <div id="dashboard" class="tab-content">
+                <h2>📊 Estatísticas</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="total-products">0</h3>
+                        <p>Total de Produtos</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="total-categories">0</h3>
+                        <p>Categorias Ativas</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="avg-price">R$ 0</h3>
+                        <p>Preço Médio</p>
+                    </div>
+                </div>
+                
+                <h3>📋 Instruções Rápidas</h3>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                    <h4>Como adicionar um produto:</h4>
+                    <ol>
+                        <li>Clique em "➕ Adicionar Produto"</li>
+                        <li>Preencha todas as informações</li>
+                        <li>Para a imagem, use um link (Google Drive, Imgur, etc.)</li>
+                        <li>Clique em "💾 Salvar Produto"</li>
+                    </ol>
+                    
+                    <h4>Como editar um produto:</h4>
+                    <ol>
+                        <li>Vá em "📦 Gerenciar Produtos"</li>
+                        <li>Clique em "✏️ Editar" no produto desejado</li>
+                        <li>Modifique as informações</li>
+                        <li>Clique em "💾 Salvar Alterações"</li>
+                    </ol>
+                    
+                    <h4>Como excluir um produto:</h4>
+                    <ol>
+                        <li>Vá em "📦 Gerenciar Produtos"</li>
+                        <li>Clique em "🗑️ Excluir" no produto desejado</li>
+                        <li>Confirme a exclusão</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <!-- Adicionar Produto -->
+            <div id="add-product" class="tab-content hidden">
+                <h2>➕ Adicionar Novo Produto</h2>
+                <div id="message"></div>
+                
+                <form class="product-form" id="productForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productId">ID do Produto *</label>
+                            <input type="text" id="productId" required placeholder="Ex: VEST001">
+                        </div>
+                        <div class="form-group">
+                            <label for="productCategory">Categoria *</label>
+                            <select id="productCategory" required>
+                                <option value="">Selecione uma categoria</option>
+                                <option value="vestido">Vestido</option>
+                                <option value="conjunto">Conjunto</option>
+                                <option value="tshirt">T-Shirt</option>
+                                <option value="macacao">Macacão</option>
+                                <option value="blusa">Blusa</option>
+                                <option value="camisa">Camisa</option>
+                                <option value="saia-jeans">Saia Jeans</option>
+                                <option value="saia-social">Saia Social</option>
+                                <option value="calca">Calça</option>
+                                <option value="pijama">Pijama</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="productName">Nome do Produto *</label>
+                        <input type="text" id="productName" required placeholder="Ex: Vestido Floral Elegante">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productPrice">Preço (R$) *</label>
+                            <input type="number" id="productPrice" step="0.01" required placeholder="Ex: 89.90">
+                        </div>
+                        <div class="form-group">
+                            <label for="productImage">URL da Imagem *</label>
+                            <input type="url" id="productImage" required placeholder="https://exemplo.com/imagem.jpg">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="productDescription">Descrição *</label>
+                        <textarea id="productDescription" required placeholder="Descreva o produto..."></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productSizes">Tamanhos (separados por vírgula) *</label>
+                            <input type="text" id="productSizes" required placeholder="Ex: P,M,G,GG">
+                        </div>
+                        <div class="form-group">
+                            <label for="productColors">Cores (separadas por vírgula) *</label>
+                            <input type="text" id="productColors" required placeholder="Ex: Preto,Branco,Azul">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-save">💾 Salvar Produto</button>
+                </form>
+            </div>
+            
+            <!-- Gerenciar Produtos -->
+            <div id="manage-products" class="tab-content hidden">
+                <h2>📦 Gerenciar Produtos</h2>
+                <div id="productsList"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="admin.js"></script>
+</body>
+</html>
