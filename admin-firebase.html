@@ -204,6 +204,58 @@
             padding: 40px;
             color: #8b5a7a;
         }
+        
+        .category-filters {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .category-filters h3 {
+            color: #8b5a7a;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .filter-btn {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            color: #8b5a7a;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .filter-btn:hover {
+            background: #d4a5c7;
+            color: white;
+            border-color: #d4a5c7;
+            transform: translateY(-2px);
+        }
+        
+        .filter-btn.active {
+            background: linear-gradient(135deg, #d4a5c7 0%, #c896b8 50%, #b887a9 100%);
+            color: white;
+            border-color: #d4a5c7;
+        }
+        
+        .filter-btn i {
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
@@ -241,6 +293,57 @@
                 <i class="fas fa-trash"></i>
                 Limpar Todos
             </button>
+        </div>
+
+        <!-- Category Filters -->
+        <div class="category-filters">
+            <h3>Filtrar por Categoria:</h3>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterByCategory('all')" data-category="all">
+                    <i class="fas fa-th"></i>
+                    Todos (<span id="count-all">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('vestido')" data-category="vestido">
+                    <i class="fas fa-female"></i>
+                    Vestidos (<span id="count-vestido">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('conjunto')" data-category="conjunto">
+                    <i class="fas fa-tshirt"></i>
+                    Conjuntos (<span id="count-conjunto">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('tshirt')" data-category="tshirt">
+                    <i class="fas fa-tshirt"></i>
+                    T-Shirts (<span id="count-tshirt">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('macacao')" data-category="macacao">
+                    <i class="fas fa-tshirt"></i>
+                    Macacões (<span id="count-macacao">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('blusa')" data-category="blusa">
+                    <i class="fas fa-tshirt"></i>
+                    Blusas (<span id="count-blusa">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('camisa')" data-category="camisa">
+                    <i class="fas fa-tshirt"></i>
+                    Camisas (<span id="count-camisa">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('saia-jeans')" data-category="saia-jeans">
+                    <i class="fas fa-tshirt"></i>
+                    Saias Jeans (<span id="count-saia-jeans">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('saia-social')" data-category="saia-social">
+                    <i class="fas fa-tshirt"></i>
+                    Saias Social (<span id="count-saia-social">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('calca')" data-category="calca">
+                    <i class="fas fa-tshirt"></i>
+                    Calças (<span id="count-calca">0</span>)
+                </button>
+                <button class="filter-btn" onclick="filterByCategory('pijama')" data-category="pijama">
+                    <i class="fas fa-bed"></i>
+                    Pijamas (<span id="count-pijama">0</span>)
+                </button>
+            </div>
         </div>
 
         <div id="statusMessage" class="status-message" style="display: none;"></div>
@@ -325,6 +428,7 @@
     <script>
         let products = [];
         let editingProductId = null;
+        let currentFilter = 'all';
 
         // Initialize admin
         document.addEventListener('DOMContentLoaded', function() {
@@ -367,13 +471,18 @@
         }
 
         function displayProducts() {
+            updateCategoryCounts();
+            const filteredProducts = getFilteredProducts();
             const container = document.getElementById('productsContainer');
             
-            if (products.length === 0) {
+            if (filteredProducts.length === 0) {
+                const message = currentFilter === 'all' 
+                    ? 'Nenhum produto encontrado' 
+                    : `Nenhum produto encontrado na categoria "${getCategoryName(currentFilter)}"`;
                 container.innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #8b5a7a;">
                         <i class="fas fa-box-open" style="font-size: 3rem; margin-bottom: 20px;"></i>
-                        <h3>Nenhum produto encontrado</h3>
+                        <h3>${message}</h3>
                         <p>Clique em "Adicionar Produto" para começar</p>
                     </div>
                 `;
@@ -382,7 +491,7 @@
 
             container.innerHTML = `
                 <div class="products-grid">
-                    ${products.map(product => `
+                    ${filteredProducts.map(product => `
                         <div class="product-card-admin">
                             <img src="${product.image}" alt="${product.name}" onerror="this.src='https://via.placeholder.com/300x200?text=Imagem+Não+Encontrada'">
                             <h3>${product.name}</h3>
@@ -519,6 +628,58 @@
             setTimeout(() => {
                 statusDiv.style.display = 'none';
             }, 5000);
+        }
+
+        // Category filtering functions
+        function filterByCategory(category) {
+            currentFilter = category;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-category="${category}"]`).classList.add('active');
+            
+            // Display filtered products
+            displayProducts();
+        }
+
+        function getFilteredProducts() {
+            if (currentFilter === 'all') {
+                return products;
+            }
+            return products.filter(product => product.category === currentFilter);
+        }
+
+        function updateCategoryCounts() {
+            const categories = ['all', 'vestido', 'conjunto', 'tshirt', 'macacao', 'blusa', 'camisa', 'saia-jeans', 'saia-social', 'calca', 'pijama'];
+            
+            categories.forEach(category => {
+                const count = category === 'all' 
+                    ? products.length 
+                    : products.filter(p => p.category === category).length;
+                
+                const countElement = document.getElementById(`count-${category}`);
+                if (countElement) {
+                    countElement.textContent = count;
+                }
+            });
+        }
+
+        function getCategoryName(category) {
+            const names = {
+                'vestido': 'Vestidos',
+                'conjunto': 'Conjuntos',
+                'tshirt': 'T-Shirts',
+                'macacao': 'Macacões',
+                'blusa': 'Blusas',
+                'camisa': 'Camisas',
+                'saia-jeans': 'Saias Jeans',
+                'saia-social': 'Saias Social',
+                'calca': 'Calças',
+                'pijama': 'Pijamas'
+            };
+            return names[category] || category;
         }
     </script>
 </body>
