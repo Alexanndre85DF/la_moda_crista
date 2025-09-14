@@ -296,6 +296,7 @@
             <div class="admin-tab active" onclick="showTab('dashboard')">📊 Dashboard</div>
             <div class="admin-tab" onclick="showTab('add-product')">➕ Adicionar Produto</div>
             <div class="admin-tab" onclick="showTab('manage-products')">📦 Gerenciar Produtos</div>
+            <div class="admin-tab" onclick="showTab('payment-methods')">💳 Formas de Pagamento</div>
         </div>
         
         <div class="admin-content">
@@ -413,6 +414,70 @@
             <div id="manage-products" class="tab-content hidden">
                 <h2>📦 Gerenciar Produtos</h2>
                 <div id="productsList"></div>
+            </div>
+            
+            <!-- Formas de Pagamento -->
+            <div id="payment-methods" class="tab-content hidden">
+                <h2>💳 Configurar Formas de Pagamento</h2>
+                <div id="paymentMessage"></div>
+                
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                    <h3>📋 Como funciona:</h3>
+                    <ul>
+                        <li><strong>PIX:</strong> Configure o desconto (ex: 10% = R$ 123,00 vira R$ 110,70)</li>
+                        <li><strong>Cartão:</strong> Configure quantas parcelas sem juros (ex: até 6x)</li>
+                        <li><strong>Débito:</strong> À vista sem desconto</li>
+                        <li>As opções aparecerão automaticamente no site</li>
+                    </ul>
+                </div>
+                
+                <form class="product-form" id="paymentForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="paymentName">Nome da Forma de Pagamento *</label>
+                            <input type="text" id="paymentName" required placeholder="Ex: PIX, Cartão de Crédito">
+                        </div>
+                        <div class="form-group">
+                            <label for="paymentType">Tipo *</label>
+                            <select id="paymentType" required onchange="updatePaymentFields()">
+                                <option value="">Selecione o tipo</option>
+                                <option value="pix">PIX (com desconto)</option>
+                                <option value="credit">Cartão de Crédito (parcelado)</option>
+                                <option value="debit">Cartão de Débito (à vista)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group" id="discountGroup" style="display: none;">
+                            <label for="paymentDiscount">Desconto (%) *</label>
+                            <input type="number" id="paymentDiscount" min="0" max="100" step="0.1" placeholder="Ex: 10">
+                        </div>
+                        <div class="form-group" id="installmentsGroup" style="display: none;">
+                            <label for="paymentInstallments">Máximo de Parcelas *</label>
+                            <input type="number" id="paymentInstallments" min="1" max="12" placeholder="Ex: 6">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="paymentDescription">Descrição (aparece no site) *</label>
+                        <input type="text" id="paymentDescription" required placeholder="Ex: PIX com 10% de desconto">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="paymentActive" checked> 
+                            Ativo (aparece no site)
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn-save">💾 Salvar Forma de Pagamento</button>
+                </form>
+                
+                <div style="margin-top: 40px;">
+                    <h3>📋 Formas de Pagamento Configuradas</h3>
+                    <div id="paymentMethodsList"></div>
+                </div>
             </div>
         </div>
     </div>

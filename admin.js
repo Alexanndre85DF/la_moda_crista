@@ -1,10 +1,13 @@
 // Painel Administrativo - La Moda Cristã
 let products = {};
 let editingProduct = null;
+let paymentMethods = [];
+let editingPayment = null;
 
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
     loadProducts();
+    loadPaymentMethods();
     updateStats();
     setupEventListeners();
 });
@@ -41,10 +44,55 @@ function saveProducts() {
     console.log('Produtos salvos:', products);
 }
 
+// Carregar formas de pagamento do localStorage
+function loadPaymentMethods() {
+    const savedMethods = localStorage.getItem('laModaCristaPaymentMethods');
+    if (savedMethods) {
+        paymentMethods = JSON.parse(savedMethods);
+    } else {
+        // Formas de pagamento padrão
+        paymentMethods = [
+            {
+                id: 'pix_default',
+                name: 'PIX',
+                type: 'pix',
+                discount: 10,
+                description: 'PIX com 10% de desconto',
+                active: true
+            },
+            {
+                id: 'credit_default',
+                name: 'Cartão de Crédito',
+                type: 'credit',
+                installments: 6,
+                description: 'Cartão de Crédito',
+                active: true
+            },
+            {
+                id: 'debit_default',
+                name: 'Cartão de Débito',
+                type: 'debit',
+                description: 'Cartão de Débito',
+                active: true
+            }
+        ];
+        savePaymentMethods();
+    }
+    displayPaymentMethods();
+}
+
+// Salvar formas de pagamento no localStorage
+function savePaymentMethods() {
+    localStorage.setItem('laModaCristaPaymentMethods', JSON.stringify(paymentMethods));
+}
+
 // Configurar event listeners
 function setupEventListeners() {
     const form = document.getElementById('productForm');
     form.addEventListener('submit', handleFormSubmit);
+    
+    const paymentForm = document.getElementById('paymentForm');
+    paymentForm.addEventListener('submit', handlePaymentFormSubmit);
 }
 
 // Mostrar aba
@@ -66,6 +114,8 @@ function showTab(tabName) {
         displayProducts();
     } else if (tabName === 'dashboard') {
         updateStats();
+    } else if (tabName === 'payment-methods') {
+        displayPaymentMethods();
     }
 }
 
@@ -303,9 +353,210 @@ function syncWithMainSite() {
     // Salvar produtos em um formato que o site principal possa acessar
     const exportData = {
         products: products,
+        paymentMethods: paymentMethods,
         lastUpdated: new Date().toISOString()
     };
     
     localStorage.setItem('laModaCristaExport', JSON.stringify(exportData));
-    showMessage('Produtos sincronizados com o site principal!', 'success');
+    showMessage('Produtos e formas de pagamento sincronizados com o site principal!', 'success');
+}
+
+// ========== SISTEMA DE FORMAS DE PAGAMENTO ==========
+
+// Atualizar campos do formulário de pagamento baseado no tipo
+function updatePaymentFields() {
+    const type = document.getElementById('paymentType').value;
+    const discountGroup = document.getElementById('discountGroup');
+    const installmentsGroup = document.getElementById('installmentsGroup');
+    
+    // Esconder todos os grupos
+    discountGroup.style.display = 'none';
+    installmentsGroup.style.display = 'none';
+    
+    // Mostrar grupos baseado no tipo
+    if (type === 'pix') {
+        discountGroup.style.display = 'block';
+        document.getElementById('paymentDiscount').required = true;
+        document.getElementById('paymentInstallments').required = false;
+    } else if (type === 'credit') {
+        installmentsGroup.style.display = 'block';
+        document.getElementById('paymentDiscount').required = false;
+        document.getElementById('paymentInstallments').required = true;
+    } else {
+        document.getElementById('paymentDiscount').required = false;
+        document.getElementById('paymentInstallments').required = false;
+    }
+}
+
+// Lidar com envio do formulário de pagamento
+function handlePaymentFormSubmit(e) {
+    e.preventDefault();
+    
+    const formData = {
+        id: 'payment_' + Date.now(),
+        name: document.getElementById('paymentName').value.trim(),
+        type: document.getElementById('paymentType').value,
+        description: document.getElementById('paymentDescription').value.trim(),
+        active: document.getElementById('paymentActive').checked
+    };
+    
+    // Adicionar campos específicos baseado no tipo
+    if (formData.type === 'pix') {
+        formData.discount = parseFloat(document.getElementById('paymentDiscount').value);
+        if (!formData.discount && formData.discount !== 0) {
+            showPaymentMessage('Por favor, informe o desconto para PIX!', 'error');
+            return;
+        }
+    } else if (formData.type === 'credit') {
+        formData.installments = parseInt(document.getElementById('paymentInstallments').value);
+        if (!formData.installments) {
+            showPaymentMessage('Por favor, informe o número de parcelas!', 'error');
+            return;
+        }
+    }
+    
+    // Validar dados obrigatórios
+    if (!formData.name || !formData.type || !formData.description) {
+        showPaymentMessage('Por favor, preencha todos os campos obrigatórios!', 'error');
+        return;
+    }
+    
+    // Adicionar ou editar forma de pagamento
+    if (editingPayment) {
+        updatePaymentMethod(editingPayment.id, formData);
+        showPaymentMessage('Forma de pagamento atualizada com sucesso!', 'success');
+    } else {
+        addPaymentMethod(formData);
+        showPaymentMessage('Forma de pagamento adicionada com sucesso!', 'success');
+    }
+    
+    // Limpar formulário
+    clearPaymentForm();
+    editingPayment = null;
+    
+    // Atualizar exibição
+    displayPaymentMethods();
+}
+
+// Adicionar forma de pagamento
+function addPaymentMethod(paymentData) {
+    paymentMethods.push(paymentData);
+    savePaymentMethods();
+}
+
+// Atualizar forma de pagamento
+function updatePaymentMethod(oldId, newData) {
+    const index = paymentMethods.findIndex(p => p.id === oldId);
+    if (index !== -1) {
+        paymentMethods[index] = { ...newData, id: oldId };
+        savePaymentMethods();
+    }
+}
+
+// Remover forma de pagamento
+function removePaymentMethod(id) {
+    paymentMethods = paymentMethods.filter(p => p.id !== id);
+    savePaymentMethods();
+}
+
+// Exibir formas de pagamento
+function displayPaymentMethods() {
+    const container = document.getElementById('paymentMethodsList');
+    container.innerHTML = '';
+    
+    if (paymentMethods.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; font-size: 1.2rem;">Nenhuma forma de pagamento configurada ainda.</p>';
+        return;
+    }
+    
+    paymentMethods.forEach(payment => {
+        const paymentCard = createPaymentCard(payment);
+        container.appendChild(paymentCard);
+    });
+}
+
+// Criar card da forma de pagamento
+function createPaymentCard(payment) {
+    const card = document.createElement('div');
+    card.className = 'product-card-admin';
+    
+    let details = '';
+    if (payment.type === 'pix') {
+        details = `<strong>Desconto:</strong> ${payment.discount}%`;
+    } else if (payment.type === 'credit') {
+        details = `<strong>Parcelas:</strong> até ${payment.installments}x`;
+    } else {
+        details = '<strong>Tipo:</strong> À vista';
+    }
+    
+    card.innerHTML = `
+        <div class="product-info-admin">
+            <h3>${payment.name}</h3>
+            <p><strong>Tipo:</strong> ${payment.type.toUpperCase()}</p>
+            <p>${details}</p>
+            <p><strong>Descrição:</strong> ${payment.description}</p>
+            <p><strong>Status:</strong> ${payment.active ? '✅ Ativo' : '❌ Inativo'}</p>
+        </div>
+        <div class="product-actions">
+            <button class="btn-edit" onclick="editPaymentMethod('${payment.id}')">✏️ Editar</button>
+            <button class="btn-delete" onclick="deletePaymentMethod('${payment.id}')">🗑️ Excluir</button>
+        </div>
+    `;
+    
+    return card;
+}
+
+// Editar forma de pagamento
+function editPaymentMethod(id) {
+    const payment = paymentMethods.find(p => p.id === id);
+    if (payment) {
+        // Preencher formulário
+        document.getElementById('paymentName').value = payment.name;
+        document.getElementById('paymentType').value = payment.type;
+        document.getElementById('paymentDescription').value = payment.description;
+        document.getElementById('paymentActive').checked = payment.active;
+        
+        // Atualizar campos específicos
+        updatePaymentFields();
+        
+        if (payment.discount !== undefined) {
+            document.getElementById('paymentDiscount').value = payment.discount;
+        }
+        if (payment.installments !== undefined) {
+            document.getElementById('paymentInstallments').value = payment.installments;
+        }
+        
+        // Marcar como editando
+        editingPayment = payment;
+        
+        // Scroll para o topo
+        window.scrollTo(0, 0);
+    }
+}
+
+// Excluir forma de pagamento
+function deletePaymentMethod(id) {
+    if (confirm('Tem certeza que deseja excluir esta forma de pagamento?')) {
+        removePaymentMethod(id);
+        displayPaymentMethods();
+        showPaymentMessage('Forma de pagamento excluída com sucesso!', 'success');
+    }
+}
+
+// Limpar formulário de pagamento
+function clearPaymentForm() {
+    document.getElementById('paymentForm').reset();
+    document.getElementById('discountGroup').style.display = 'none';
+    document.getElementById('installmentsGroup').style.display = 'none';
+}
+
+// Mostrar mensagem de pagamento
+function showPaymentMessage(text, type) {
+    const messageDiv = document.getElementById('paymentMessage');
+    messageDiv.innerHTML = `<div class="${type}-message">${text}</div>`;
+    
+    // Remover mensagem após 3 segundos
+    setTimeout(() => {
+        messageDiv.innerHTML = '';
+    }, 3000);
 }

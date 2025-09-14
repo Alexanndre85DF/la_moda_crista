@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurar Formas de Pagamento - La Moda Cristã</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #d4a5c7 0%, #c896b8 50%, #b887a9 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #d4a5c7;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #d4a5c7 0%, #c896b8 50%, #b887a9 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 165, 199, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .payment-methods {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .payment-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        
+        .payment-card:hover {
+            border-color: #d4a5c7;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .payment-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .payment-card p {
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        .payment-actions {
+            margin-top: 15px;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #d4a5c7;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="admin-firebase.html" class="back-link">
+            <i class="fas fa-arrow-left"></i> Voltar ao Admin
+        </a>
+        
+        <div class="header">
+            <h1>💳 Configurar Formas de Pagamento</h1>
+            <p>Configure PIX com desconto, cartão parcelado e outras opções</p>
+        </div>
+        
+        <div id="message"></div>
+        
+        <form id="paymentForm">
+            <div class="form-group">
+                <label for="paymentName">Nome da Forma de Pagamento *</label>
+                <input type="text" id="paymentName" required placeholder="Ex: PIX, Cartão de Crédito">
+            </div>
+            
+            <div class="form-group">
+                <label for="paymentType">Tipo *</label>
+                <select id="paymentType" required onchange="updateFields()">
+                    <option value="">Selecione o tipo</option>
+                    <option value="pix">PIX (com desconto)</option>
+                    <option value="credit">Cartão de Crédito (parcelado)</option>
+                    <option value="debit">Cartão de Débito (à vista)</option>
+                </select>
+            </div>
+            
+            <div class="form-group hidden" id="discountGroup">
+                <label for="paymentDiscount">Desconto (%) *</label>
+                <input type="number" id="paymentDiscount" min="0" max="100" step="0.1" placeholder="Ex: 10">
+            </div>
+            
+            <div class="form-group hidden" id="installmentsGroup">
+                <label for="paymentInstallments">Máximo de Parcelas *</label>
+                <input type="number" id="paymentInstallments" min="1" max="12" placeholder="Ex: 6">
+            </div>
+            
+            <div class="form-group">
+                <label for="paymentDescription">Descrição (aparece no site) *</label>
+                <input type="text" id="paymentDescription" required placeholder="Ex: PIX com 10% de desconto">
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="paymentActive" checked> 
+                    Ativo (aparece no site)
+                </label>
+            </div>
+            
+            <button type="submit" class="btn">
+                <i class="fas fa-save"></i> Salvar Forma de Pagamento
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                <i class="fas fa-times"></i> Limpar
+            </button>
+        </form>
+        
+        <div class="payment-methods">
+            <h3>📋 Formas de Pagamento Configuradas</h3>
+            <div id="paymentMethodsList">
+                <p style="text-align: center; color: #666;">Nenhuma forma de pagamento configurada ainda.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let paymentMethods = [];
+        let editingPayment = null;
+
+        // Carregar ao iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPaymentMethods();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('paymentForm').addEventListener('submit', handleSubmit);
+        }
+
+        function loadPaymentMethods() {
+            const saved = localStorage.getItem('laModaCristaPaymentMethods');
+            if (saved) {
+                paymentMethods = JSON.parse(saved);
+            } else {
+                // Formas padrão
+                paymentMethods = [
+                    {
+                        id: 'pix_default',
+                        name: 'PIX',
+                        type: 'pix',
+                        discount: 10,
+                        description: 'PIX com 10% de desconto',
+                        active: true
+                    },
+                    {
+                        id: 'credit_default',
+                        name: 'Cartão de Crédito',
+                        type: 'credit',
+                        installments: 6,
+                        description: 'Cartão de Crédito',
+                        active: true
+                    }
+                ];
+                savePaymentMethods();
+            }
+            displayPaymentMethods();
+        }
+
+        function savePaymentMethods() {
+            localStorage.setItem('laModaCristaPaymentMethods', JSON.stringify(paymentMethods));
+        }
+
+        function updateFields() {
+            const type = document.getElementById('paymentType').value;
+            const discountGroup = document.getElementById('discountGroup');
+            const installmentsGroup = document.getElementById('installmentsGroup');
+            
+            discountGroup.classList.add('hidden');
+            installmentsGroup.classList.add('hidden');
+            
+            if (type === 'pix') {
+                discountGroup.classList.remove('hidden');
+            } else if (type === 'credit') {
+                installmentsGroup.classList.remove('hidden');
+            }
+        }
+
+        function handleSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                id: editingPayment ? editingPayment.id : 'payment_' + Date.now(),
+                name: document.getElementById('paymentName').value.trim(),
+                type: document.getElementById('paymentType').value,
+                description: document.getElementById('paymentDescription').value.trim(),
+                active: document.getElementById('paymentActive').checked
+            };
+            
+            // Campos específicos
+            if (formData.type === 'pix') {
+                formData.discount = parseFloat(document.getElementById('paymentDiscount').value);
+                if (!formData.discount && formData.discount !== 0) {
+                    showMessage('Informe o desconto para PIX!', 'error');
+                    return;
+                }
+            } else if (formData.type === 'credit') {
+                formData.installments = parseInt(document.getElementById('paymentInstallments').value);
+                if (!formData.installments) {
+                    showMessage('Informe o número de parcelas!', 'error');
+                    return;
+                }
+            }
+            
+            // Validar
+            if (!formData.name || !formData.type || !formData.description) {
+                showMessage('Preencha todos os campos obrigatórios!', 'error');
+                return;
+            }
+            
+            // Salvar
+            if (editingPayment) {
+                const index = paymentMethods.findIndex(p => p.id === editingPayment.id);
+                paymentMethods[index] = formData;
+                showMessage('Forma de pagamento atualizada!', 'success');
+            } else {
+                paymentMethods.push(formData);
+                showMessage('Forma de pagamento adicionada!', 'success');
+            }
+            
+            savePaymentMethods();
+            displayPaymentMethods();
+            clearForm();
+        }
+
+        function displayPaymentMethods() {
+            const container = document.getElementById('paymentMethodsList');
+            
+            if (paymentMethods.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">Nenhuma forma de pagamento configurada ainda.</p>';
+                return;
+            }
+            
+            container.innerHTML = paymentMethods.map(payment => `
+                <div class="payment-card">
+                    <h3>${payment.name}</h3>
+                    <p><strong>Tipo:</strong> ${payment.type.toUpperCase()}</p>
+                    ${payment.discount ? `<p><strong>Desconto:</strong> ${payment.discount}%</p>` : ''}
+                    ${payment.installments ? `<p><strong>Parcelas:</strong> até ${payment.installments}x</p>` : ''}
+                    <p><strong>Descrição:</strong> ${payment.description}</p>
+                    <p><strong>Status:</strong> ${payment.active ? '✅ Ativo' : '❌ Inativo'}</p>
+                    <div class="payment-actions">
+                        <button class="btn btn-small" onclick="editPayment('${payment.id}')">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn btn-small btn-danger" onclick="deletePayment('${payment.id}')">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editPayment(id) {
+            const payment = paymentMethods.find(p => p.id === id);
+            if (payment) {
+                document.getElementById('paymentName').value = payment.name;
+                document.getElementById('paymentType').value = payment.type;
+                document.getElementById('paymentDescription').value = payment.description;
+                document.getElementById('paymentActive').checked = payment.active;
+                
+                updateFields();
+                
+                if (payment.discount !== undefined) {
+                    document.getElementById('paymentDiscount').value = payment.discount;
+                }
+                if (payment.installments !== undefined) {
+                    document.getElementById('paymentInstallments').value = payment.installments;
+                }
+                
+                editingPayment = payment;
+                document.getElementById('paymentForm').scrollIntoView();
+            }
+        }
+
+        function deletePayment(id) {
+            if (confirm('Tem certeza que deseja excluir esta forma de pagamento?')) {
+                paymentMethods = paymentMethods.filter(p => p.id !== id);
+                savePaymentMethods();
+                displayPaymentMethods();
+                showMessage('Forma de pagamento excluída!', 'success');
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('paymentForm').reset();
+            document.getElementById('discountGroup').classList.add('hidden');
+            document.getElementById('installmentsGroup').classList.add('hidden');
+            editingPayment = null;
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

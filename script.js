@@ -1,3 +1,4 @@
+// Versão: 20250103w - Texto PIX Simples
 // Global variables
 // Load cart from localStorage or initialize empty
 let cart = JSON.parse(localStorage.getItem('laModaCristaCart')) || [];
@@ -41,9 +42,14 @@ function createProductCard(product) {
         </div>
         <div class="product-card-info">
             <h3>${product.name}</h3>
-            <p class="product-description">${product.description}</p>
-            <p class="product-colors"><strong>Cores:</strong> ${product.colors.join(', ')}</p>
-            <p class="price">R$ ${product.price.toFixed(2)}</p>
+            ${product.description && product.description !== 'Sem descrição' ? `<p class="product-description">${product.description}</p>` : ''}
+            ${product.colors && product.colors.length > 0 && product.colors[0] !== 'Não especificado' ? `<p class="product-colors"><strong>Cores:</strong> ${product.colors.join(', ')}</p>` : ''}
+            <p class="price">R$ ${formatPrice(product.price)}</p>
+            
+            ${product.paymentSettings && product.paymentSettings.pixDiscount > 0 ? 
+                `<p style="background: #e8f5e8; color: #4CAF50; padding: 8px; border-radius: 5px; text-align: center; margin: 10px 0; font-weight: bold;">
+                    💳 PIX com ${product.paymentSettings.pixDiscount}% de desconto
+                </p>` : ''}
             
             <div class="size-selection">
                 <label for="size-${product.id}"><strong>Selecione o tamanho:</strong></label>
@@ -53,12 +59,182 @@ function createProductCard(product) {
                 </select>
             </div>
             
+            <!-- Opções de pagamento -->
+            <div class="installment-options">
+                <label for="installment-${product.id}"><strong>Forma de pagamento:</strong></label>
+                <select id="installment-${product.id}" class="installment-dropdown" onchange="updateInstallmentDisplay('${product.id}')">
+                    ${generatePaymentOptionsHTML(product.price, product)}
+                </select>
+            </div>
+            
             <button class="btn-add-cart" id="btn-${product.id}" onclick="addToCart('${product.id}')" disabled>
                 Selecione um tamanho
             </button>
         </div>
     `;
     return card;
+}
+
+// Function to format price with comma instead of dot
+function formatPrice(price) {
+    return price.toFixed(2).replace('.', ',');
+}
+
+// Load payment methods from admin
+function loadPaymentMethods() {
+    const exportData = localStorage.getItem('laModaCristaExport');
+    if (exportData) {
+        const data = JSON.parse(exportData);
+        return data.paymentMethods || [];
+    }
+    return [];
+}
+
+// Generate payment options based on configured methods
+function generatePaymentOptions(productPrice) {
+    const paymentMethods = loadPaymentMethods();
+    let options = [];
+    
+    paymentMethods.forEach(method => {
+        if (!method.active) return;
+        
+        if (method.type === 'pix') {
+            const discountAmount = productPrice * (method.discount / 100);
+            const finalPrice = productPrice - discountAmount;
+            options.push({
+                value: method.id,
+                text: `${method.name} - R$ ${formatPrice(finalPrice)} (${method.discount}% desconto)`,
+                type: 'pix',
+                discount: method.discount,
+                finalPrice: finalPrice
+            });
+        } else if (method.type === 'credit') {
+            // À vista no cartão
+            options.push({
+                value: method.id + '_1',
+                text: `${method.name} - R$ ${formatPrice(productPrice)}`,
+                type: 'credit',
+                installments: 1,
+                finalPrice: productPrice
+            });
+            
+            // Parcelado
+            for (let i = 2; i <= method.installments; i++) {
+                const installmentPrice = productPrice / i;
+                options.push({
+                    value: method.id + '_' + i,
+                    text: `${i}x de R$ ${formatPrice(installmentPrice)} sem juros`,
+                    type: 'credit',
+                    installments: i,
+                    finalPrice: productPrice
+                });
+            }
+        } else if (method.type === 'debit') {
+            options.push({
+                value: method.id,
+                text: `${method.name} - R$ ${formatPrice(productPrice)}`,
+                type: 'debit',
+                finalPrice: productPrice
+            });
+        }
+    });
+    
+    return options;
+}
+
+// Generate HTML for payment options
+function generatePaymentOptionsHTML(productPrice, product = null) {
+    let options = [];
+    
+    // Se o produto tem configurações de pagamento, usar elas
+    if (product && product.paymentSettings) {
+        const settings = product.paymentSettings;
+        
+        // PIX com desconto
+        if (settings.enablePixDiscount && settings.pixDiscount > 0) {
+            const discountAmount = productPrice * (settings.pixDiscount / 100);
+            const finalPrice = productPrice - discountAmount;
+            options.push({
+                value: 'pix_discount',
+                text: `PIX - R$ ${formatPrice(finalPrice)} (${settings.pixDiscount}% desconto)`,
+                type: 'pix',
+                discount: settings.pixDiscount,
+                finalPrice: finalPrice
+            });
+        }
+        
+        // Cartão à vista
+        options.push({
+            value: 'credit_1',
+            text: `Cartão de Crédito - R$ ${formatPrice(productPrice)}`,
+            type: 'credit',
+            installments: 1,
+            finalPrice: productPrice
+        });
+        
+        // Parcelamento no cartão
+        if (settings.enableCardInstallments && settings.maxInstallments > 1) {
+            for (let i = 2; i <= settings.maxInstallments; i++) {
+                const installmentPrice = productPrice / i;
+                options.push({
+                    value: `credit_${i}`,
+                    text: `${i}x de R$ ${formatPrice(installmentPrice)} sem juros`,
+                    type: 'credit',
+                    installments: i,
+                    finalPrice: productPrice
+                });
+            }
+        }
+    } else {
+        // Fallback se não houver configurações específicas
+        options = [
+            {
+                value: 'default_1',
+                text: `À vista - R$ ${formatPrice(productPrice)}`,
+                type: 'cash',
+                finalPrice: productPrice
+            },
+            {
+                value: 'default_2',
+                text: `2x de R$ ${formatPrice(productPrice / 2)} sem juros`,
+                type: 'credit',
+                installments: 2,
+                finalPrice: productPrice
+            },
+            {
+                value: 'default_3',
+                text: `3x de R$ ${formatPrice(productPrice / 3)} sem juros`,
+                type: 'credit',
+                installments: 3,
+                finalPrice: productPrice
+            },
+            {
+                value: 'default_4',
+                text: `4x de R$ ${formatPrice(productPrice / 4)} sem juros`,
+                type: 'credit',
+                installments: 4,
+                finalPrice: productPrice
+            },
+            {
+                value: 'default_5',
+                text: `5x de R$ ${formatPrice(productPrice / 5)} sem juros`,
+                type: 'credit',
+                installments: 5,
+                finalPrice: productPrice
+            },
+            {
+                value: 'default_6',
+                text: `6x de R$ ${formatPrice(productPrice / 6)} sem juros`,
+                type: 'credit',
+                installments: 6,
+                finalPrice: productPrice
+            }
+        ];
+    }
+    
+    return options.map(option => 
+        `<option value="${option.value}" data-type="${option.type}" data-final-price="${option.finalPrice}">${option.text}</option>`
+    ).join('');
 }
 
 // Initialize the application
@@ -368,11 +544,22 @@ function enableAddToCart(productId) {
     }
 }
 
+// Update installment display when option is selected
+function updateInstallmentDisplay(productId) {
+    const installmentSelect = document.getElementById(`installment-${productId}`);
+    const selectedOption = installmentSelect.options[installmentSelect.selectedIndex];
+    
+    // You can add visual feedback here if needed
+    console.log(`Parcelamento selecionado para produto ${productId}:`, selectedOption.text);
+}
+
 function addToCart(productId) {
     console.log('Adding to cart:', productId);
     
     const sizeSelect = document.getElementById(`size-${productId}`);
+    const installmentSelect = document.getElementById(`installment-${productId}`);
     const selectedSize = sizeSelect.value;
+    const selectedInstallment = installmentSelect.value;
     
     if (!selectedSize) {
         alert('Por favor, selecione um tamanho antes de adicionar ao carrinho.');
@@ -391,18 +578,31 @@ function addToCart(productId) {
     }
     
     if (product) {
+        // Get payment info
+        const selectedOption = installmentSelect.options[installmentSelect.selectedIndex];
+        const installmentText = selectedOption.text;
+        const paymentType = selectedOption.getAttribute('data-type') || 'default';
+        const finalPrice = parseFloat(selectedOption.getAttribute('data-final-price')) || product.price;
+        
         // Create cart item with all product information
         const cartItem = {
             id: product.id,
             name: product.name,
             description: product.description,
-            price: product.price,
+            price: finalPrice, // Use final price (with discount if applicable)
+            originalPrice: product.price, // Keep original price for reference
             image: product.image,
             size: selectedSize,
             sizes: product.sizes,
             colors: product.colors,
             category: productCategory,
-            quantity: 1
+            quantity: 1,
+            payment: {
+                text: installmentText,
+                type: paymentType,
+                originalPrice: product.price,
+                finalPrice: finalPrice
+            }
         };
         
         // Check if item with same size already exists in cart
@@ -513,9 +713,10 @@ function updateCartDisplay() {
                             <strong>Categoria:</strong> ${item.category}<br>
                             <strong>Tamanho selecionado:</strong> ${item.size}<br>
                             <strong>Cores:</strong> ${item.colors.join(', ')}<br>
-                            <strong>Quantidade:</strong> ${item.quantity}
+                            <strong>Quantidade:</strong> ${item.quantity}<br>
+                            <strong>Pagamento:</strong> ${item.payment ? item.payment.text : 'À vista'}
                         </p>
-                        <p class="cart-item-price">R$ ${item.price.toFixed(2)}</p>
+                        <p class="cart-item-price">R$ ${formatPrice(item.price)}</p>
                     </div>
                     <button onclick="removeFromCart(${index})">×</button>
                 `;
@@ -528,7 +729,7 @@ function updateCartDisplay() {
     const cartTotal = document.getElementById('cartTotal');
     if (cartTotal) {
         const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        cartTotal.textContent = total.toFixed(2).replace('.', ',');
+        cartTotal.textContent = formatPrice(total);
     }
 }
 
@@ -557,13 +758,14 @@ function checkout() {
         message += `📏 Tamanho selecionado: ${item.size}\n`;
         message += `🎨 Cores: ${item.colors.join(', ')}\n`;
         message += `🔢 Quantidade: ${item.quantity}\n`;
-        message += `💰 Preço: R$ ${item.price.toFixed(2)}\n`;
-        message += `💰 Subtotal: R$ ${(item.price * item.quantity).toFixed(2)}\n\n`;
+        message += `💳 Forma de pagamento: ${item.payment ? item.payment.text : 'À vista'}\n`;
+        message += `💰 Preço: R$ ${formatPrice(item.price)}\n`;
+        message += `💰 Subtotal: R$ ${formatPrice(item.price * item.quantity)}\n\n`;
         
         total += item.price * item.quantity;
     });
     
-    message += `*TOTAL: R$ ${total.toFixed(2)}*\n\n`;
+    message += `*TOTAL: R$ ${formatPrice(total)}*\n\n`;
     message += 'Por favor, confirme a disponibilidade e me informe sobre o pagamento e entrega.\n';
     message += 'Obrigada! 🙏';
     
@@ -581,10 +783,7 @@ function openImageZoom(imageSrc, productName) {
         <button class="close-image-zoom" onclick="closeImageZoom()">
             <i class="fas fa-times"></i>
         </button>
-        <img src="${imageSrc}" alt="${productName}" class="zoomed-image">
-        <div class="image-zoom-info">
-            <h3>${productName}</h3>
-        </div>
+        <img src="${imageSrc}" alt="" class="zoomed-image">
     `;
     
     document.body.appendChild(imageModal);
@@ -630,27 +829,282 @@ function openImageZoom(imageSrc, productName) {
         height: 100vh;
         object-fit: contain;
         object-position: center;
+        transition: transform 0.3s ease;
+        cursor: grab;
     `;
     
-    const info = imageModal.querySelector('.image-zoom-info');
-    info.style.cssText = `
+    // Variáveis para controle de zoom e pan
+    let currentZoom = 1;
+    const minZoom = 1;
+    const maxZoom = 3;
+    const zoomStep = 0.2;
+    
+    // Variáveis para controle de pan (arrastar)
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let translateX = 0;
+    let translateY = 0;
+    
+    // Aplicar zoom inicial
+    img.style.transform = `scale(${currentZoom}) translate(${translateX}px, ${translateY}px)`;
+    img.style.cursor = 'grab';
+    
+    // Adicionar controles de zoom
+    const zoomControls = document.createElement('div');
+    zoomControls.style.cssText = `
         position: absolute;
-        bottom: 30px;
+        bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        color: white;
-        text-align: center;
-        background: rgba(0, 0, 0, 0.7);
-        padding: 10px 20px;
-        border-radius: 25px;
-        backdrop-filter: blur(10px);
+        display: flex;
+        gap: 10px;
+        z-index: 10003;
     `;
     
-    info.querySelector('h3').style.cssText = `
-        font-size: 1.5rem;
-        margin: 0;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.innerHTML = '<i class="fas fa-search-minus"></i>';
+    zoomOutBtn.style.cssText = `
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        transition: all 0.3s ease;
     `;
+    
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.innerHTML = '<i class="fas fa-search-plus"></i>';
+    zoomInBtn.style.cssText = `
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    `;
+    
+    const resetBtn = document.createElement('button');
+    resetBtn.innerHTML = '<i class="fas fa-expand-arrows-alt"></i>';
+    resetBtn.style.cssText = `
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    `;
+    
+    zoomControls.appendChild(zoomOutBtn);
+    zoomControls.appendChild(resetBtn);
+    zoomControls.appendChild(zoomInBtn);
+    imageModal.appendChild(zoomControls);
+    
+    // Adicionar overlay para cobrir qualquer texto na imagem
+    const textOverlay = document.createElement('div');
+    textOverlay.style.cssText = `
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 150px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.95));
+        pointer-events: none;
+        z-index: 10002;
+    `;
+    imageModal.appendChild(textOverlay);
+    
+    // Funções de zoom e pan
+    function updateTransform() {
+        img.style.transform = `scale(${currentZoom}) translate(${translateX}px, ${translateY}px)`;
+    }
+    
+    function updateZoom() {
+        updateTransform();
+        
+        // Atualizar estado dos botões
+        zoomOutBtn.disabled = currentZoom <= minZoom;
+        zoomInBtn.disabled = currentZoom >= maxZoom;
+        
+        // Aplicar estilo visual aos botões desabilitados
+        zoomOutBtn.style.opacity = currentZoom <= minZoom ? '0.5' : '1';
+        zoomInBtn.style.opacity = currentZoom >= maxZoom ? '0.5' : '1';
+        
+        // Resetar posição quando voltar ao zoom 1x
+        if (currentZoom === 1) {
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+        }
+    }
+    
+    function resetPan() {
+        translateX = 0;
+        translateY = 0;
+        updateTransform();
+    }
+    
+    function zoomIn() {
+        if (currentZoom < maxZoom) {
+            currentZoom = Math.min(currentZoom + zoomStep, maxZoom);
+            updateZoom();
+        }
+    }
+    
+    function zoomOut() {
+        if (currentZoom > minZoom) {
+            currentZoom = Math.max(currentZoom - zoomStep, minZoom);
+            updateZoom();
+        }
+    }
+    
+    function resetZoom() {
+        currentZoom = 1;
+        translateX = 0;
+        translateY = 0;
+        updateZoom();
+    }
+    
+    // Event listeners para os botões
+    zoomInBtn.addEventListener('click', zoomIn);
+    zoomOutBtn.addEventListener('click', zoomOut);
+    resetBtn.addEventListener('click', resetZoom);
+    
+    // Event listener para scroll do mouse
+    imageModal.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+            zoomIn();
+        } else {
+            zoomOut();
+        }
+    });
+    
+    // Event listeners para arrastar com mouse
+    img.addEventListener('mousedown', (e) => {
+        if (currentZoom > 1) {
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            img.style.cursor = 'grabbing';
+            e.preventDefault();
+        }
+    });
+    
+    imageModal.addEventListener('mousemove', (e) => {
+        if (isDragging && currentZoom > 1) {
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+            e.preventDefault();
+        }
+    });
+    
+    imageModal.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            img.style.cursor = currentZoom > 1 ? 'grab' : 'grab';
+        }
+    });
+    
+    imageModal.addEventListener('mouseleave', () => {
+        if (isDragging) {
+            isDragging = false;
+            img.style.cursor = currentZoom > 1 ? 'grab' : 'grab';
+        }
+    });
+    
+    // Event listeners para touch (pinch zoom e pan)
+    let initialDistance = 0;
+    let initialZoom = 1;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isTouchDragging = false;
+    
+    imageModal.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1 && currentZoom > 1) {
+            // Pan com um dedo
+            isTouchDragging = true;
+            touchStartX = e.touches[0].clientX - translateX;
+            touchStartY = e.touches[0].clientY - translateY;
+            e.preventDefault();
+        } else if (e.touches.length === 2) {
+            // Pinch zoom com dois dedos
+            e.preventDefault();
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            initialDistance = Math.sqrt(
+                Math.pow(touch2.clientX - touch1.clientX, 2) +
+                Math.pow(touch2.clientY - touch1.clientY, 2)
+            );
+            initialZoom = currentZoom;
+            isTouchDragging = false;
+        }
+    });
+    
+    imageModal.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && isTouchDragging && currentZoom > 1) {
+            // Pan com um dedo
+            translateX = e.touches[0].clientX - touchStartX;
+            translateY = e.touches[0].clientY - touchStartY;
+            updateTransform();
+            e.preventDefault();
+        } else if (e.touches.length === 2) {
+            // Pinch zoom com dois dedos
+            e.preventDefault();
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const currentDistance = Math.sqrt(
+                Math.pow(touch2.clientX - touch1.clientX, 2) +
+                Math.pow(touch2.clientY - touch1.clientY, 2)
+            );
+            
+            if (initialDistance > 0) {
+                const scale = currentDistance / initialDistance;
+                const newZoom = initialZoom * scale;
+                currentZoom = Math.max(minZoom, Math.min(maxZoom, newZoom));
+                updateZoom();
+            }
+        }
+    });
+    
+    imageModal.addEventListener('touchend', () => {
+        isTouchDragging = false;
+    });
+    
+    // Hover effects para os botões
+    [zoomInBtn, zoomOutBtn, resetBtn].forEach(btn => {
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'rgba(0, 0, 0, 0.9)';
+            btn.style.transform = 'scale(1.1)';
+        });
+        
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'rgba(0, 0, 0, 0.7)';
+            btn.style.transform = 'scale(1)';
+        });
+    });
+    
+    // Inicializar estado dos botões
+    updateZoom();
     
     // Close on click outside
     imageModal.addEventListener('click', (e) => {
@@ -708,7 +1162,7 @@ function openProductModal(productId) {
                     </div>
                     <div class="product-details">
                         <p class="product-description">${product.description}</p>
-                        <p class="product-price">R$ ${product.price.toFixed(2)}</p>
+                        <p class="product-price">R$ ${formatPrice(product.price)}</p>
                         
                         <div class="size-selection">
                             <h4>Tamanhos:</h4>

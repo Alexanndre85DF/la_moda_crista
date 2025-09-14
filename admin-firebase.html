@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - La Moda Cristã</title>
-    <link rel="stylesheet" href="styles.css">
+    <!-- Versão: 20250103r - Campos PIX Simples -->
+    <link rel="stylesheet" href="styles.css?v=20250103k">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .admin-container {
@@ -289,9 +290,17 @@
                 <i class="fas fa-sync"></i>
                 Atualizar Lista
             </button>
+            <button class="btn-admin" onclick="openPaymentMethodsModal()">
+                <i class="fas fa-credit-card"></i>
+                Formas de Pagamento
+            </button>
             <button class="btn-admin danger" onclick="clearAllProducts()">
                 <i class="fas fa-trash"></i>
                 Limpar Todos
+            </button>
+            <button class="btn-admin secondary" onclick="forceReload()" style="background: #ff9800;">
+                <i class="fas fa-sync-alt"></i>
+                Atualizar Página
             </button>
         </div>
 
@@ -361,30 +370,30 @@
         <div class="form-container">
             <h2 id="modalTitle">Adicionar Produto</h2>
             
-            <form id="productForm">
+            <form id="productForm" novalidate>
                 <div class="form-group">
                     <label for="productName">Nome do Produto</label>
-                    <input type="text" id="productName" required>
+                    <input type="text" id="productName" placeholder="Digite o nome do produto">
                 </div>
                 
                 <div class="form-group">
                     <label for="productPrice">Preço (R$)</label>
-                    <input type="number" id="productPrice" step="0.01" required>
+                    <input type="number" id="productPrice" step="0.01" placeholder="0.00">
                 </div>
                 
                 <div class="form-group">
                     <label for="productImage">URL da Imagem</label>
-                    <input type="url" id="productImage" required>
+                    <input type="url" id="productImage" placeholder="https://exemplo.com/imagem.jpg">
                 </div>
                 
                 <div class="form-group">
                     <label for="productDescription">Descrição</label>
-                    <textarea id="productDescription" required></textarea>
+                    <textarea id="productDescription" placeholder="Descreva o produto..."></textarea>
                 </div>
                 
                 <div class="form-group">
                     <label for="productCategory">Categoria</label>
-                    <select id="productCategory" required>
+                    <select id="productCategory">
                         <option value="">Selecione uma categoria</option>
                         <option value="vestido">Vestido</option>
                         <option value="conjunto">Conjunto</option>
@@ -401,12 +410,29 @@
                 
                 <div class="form-group">
                     <label for="productSizes">Tamanhos (separados por vírgula)</label>
-                    <input type="text" id="productSizes" placeholder="P, M, G, GG" required>
+                    <input type="text" id="productSizes" placeholder="P, M, G, GG">
                 </div>
                 
                 <div class="form-group">
                     <label for="productColors">Cores (separadas por vírgula)</label>
-                    <input type="text" id="productColors" placeholder="Preto, Branco, Rosa" required>
+                    <input type="text" id="productColors" placeholder="Preto, Branco, Rosa">
+                </div>
+                
+                <!-- Configurações de Pagamento -->
+                <div style="border-top: 2px solid #e0e0e0; padding-top: 20px; margin-top: 20px;">
+                    <h3 style="color: #d4a5c7; margin-bottom: 15px;">💳 Configurações de Pagamento</h3>
+                    
+                    <div class="form-group">
+                        <label for="pixDiscount">Desconto PIX (%)</label>
+                        <input type="number" id="pixDiscount" min="0" max="100" step="0.1" placeholder="Ex: 10 (deixe vazio se não quiser desconto)">
+                        <small style="color: #666;">Digite a porcentagem de desconto para PIX. Se deixar vazio, não aparecerá desconto.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="maxInstallments">Máximo de parcelas no cartão</label>
+                        <input type="number" id="maxInstallments" min="1" max="12" placeholder="Ex: 6 (deixe vazio se não quiser parcelamento)">
+                        <small style="color: #666;">Digite quantas parcelas máximo no cartão. Se deixar vazio, não aparecerá parcelamento.</small>
+                    </div>
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
@@ -423,23 +449,116 @@
         </div>
     </div>
 
+    <!-- Payment Methods Modal -->
+    <div class="form-modal" id="paymentMethodsModal">
+        <div class="form-container">
+            <h2>💳 Configurar Formas de Pagamento</h2>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                <h3>📋 Como funciona:</h3>
+                <ul>
+                    <li><strong>PIX:</strong> Configure o desconto (ex: 10% = R$ 123,00 vira R$ 110,70)</li>
+                    <li><strong>Cartão:</strong> Configure quantas parcelas sem juros (ex: até 6x)</li>
+                    <li><strong>Débito:</strong> À vista sem desconto</li>
+                    <li>As opções aparecerão automaticamente no site</li>
+                </ul>
+            </div>
+            
+            <form id="paymentForm">
+                <div class="form-group">
+                    <label for="paymentName">Nome da Forma de Pagamento</label>
+                    <input type="text" id="paymentName" placeholder="Ex: PIX, Cartão de Crédito">
+                </div>
+                
+                <div class="form-group">
+                    <label for="paymentType">Tipo</label>
+                    <select id="paymentType" onchange="updatePaymentFields()">
+                        <option value="">Selecione o tipo</option>
+                        <option value="pix">PIX (com desconto)</option>
+                        <option value="credit">Cartão de Crédito (parcelado)</option>
+                        <option value="debit">Cartão de Débito (à vista)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="discountGroup" style="display: none;">
+                    <label for="paymentDiscount">Desconto (%) *</label>
+                    <input type="number" id="paymentDiscount" min="0" max="100" step="0.1" placeholder="Ex: 10">
+                </div>
+                
+                <div class="form-group" id="installmentsGroup" style="display: none;">
+                    <label for="paymentInstallments">Máximo de Parcelas *</label>
+                    <input type="number" id="paymentInstallments" min="1" max="12" placeholder="Ex: 6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="paymentDescription">Descrição (aparece no site)</label>
+                    <input type="text" id="paymentDescription" placeholder="Ex: PIX com 10% de desconto">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="paymentActive" checked> 
+                        Ativo (aparece no site)
+                    </label>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn-admin" style="flex: 1;">
+                        <i class="fas fa-save"></i>
+                        Salvar Forma de Pagamento
+                    </button>
+                    <button type="button" class="btn-admin secondary" onclick="closePaymentMethodsModal()" style="flex: 1;">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+            
+            <div style="margin-top: 30px;">
+                <h3>📋 Formas de Pagamento Configuradas</h3>
+                <div id="paymentMethodsList"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script type="module" src="firebase-config.js"></script>
     <script>
         let products = [];
         let editingProductId = null;
         let currentFilter = 'all';
+        let paymentMethods = [];
+        let editingPayment = null;
 
         // Initialize admin
         document.addEventListener('DOMContentLoaded', function() {
+            // Verificar se é a versão atualizada
+            const currentVersion = '20250103r';
+            const savedVersion = localStorage.getItem('adminVersion');
+            
+            if (savedVersion !== currentVersion) {
+                localStorage.setItem('adminVersion', currentVersion);
+                // Forçar reload para garantir que a versão atualizada seja carregada
+                window.location.reload(true);
+                return;
+            }
+            
             loadProductsFromFirebase();
+            loadPaymentMethods();
             setupEventListeners();
         });
 
         function setupEventListeners() {
             const form = document.getElementById('productForm');
             form.addEventListener('submit', handleProductSubmit);
+            
+            const paymentForm = document.getElementById('paymentForm');
+            if (paymentForm) {
+                paymentForm.addEventListener('submit', handlePaymentFormSubmit);
+            }
         }
+
+        // Funções simplificadas - não precisam mais de toggle
 
         async function loadProductsFromFirebase() {
             try {
@@ -496,9 +615,9 @@
                             <img src="${product.image}" alt="${product.name}" onerror="this.src='https://via.placeholder.com/300x200?text=Imagem+Não+Encontrada'">
                             <h3>${product.name}</h3>
                             <p><strong>Categoria:</strong> ${product.category}</p>
-                            <p><strong>Descrição:</strong> ${product.description}</p>
+                            ${product.description && product.description !== 'Sem descrição' ? `<p><strong>Descrição:</strong> ${product.description}</p>` : ''}
                             <p><strong>Tamanhos:</strong> ${product.sizes.join(', ')}</p>
-                            <p><strong>Cores:</strong> ${product.colors.join(', ')}</p>
+                            ${product.colors && product.colors.length > 0 && product.colors[0] !== 'Não especificado' ? `<p><strong>Cores:</strong> ${product.colors.join(', ')}</p>` : ''}
                             <p class="price">R$ ${product.price.toFixed(2)}</p>
                             <div class="product-actions">
                                 <button class="btn-admin btn-small" onclick="editProduct('${product.id}')">
@@ -520,6 +639,11 @@
             editingProductId = null;
             document.getElementById('modalTitle').textContent = 'Adicionar Produto';
             document.getElementById('productForm').reset();
+            
+            // Reset campos de pagamento
+            document.getElementById('pixDiscount').value = '';
+            document.getElementById('maxInstallments').value = '';
+            
             document.getElementById('productModal').classList.add('active');
         }
 
@@ -538,6 +662,16 @@
             document.getElementById('productSizes').value = product.sizes.join(', ');
             document.getElementById('productColors').value = product.colors.join(', ');
             
+            // Carregar configurações de pagamento
+            if (product.paymentSettings) {
+                document.getElementById('pixDiscount').value = product.paymentSettings.pixDiscount || '';
+                document.getElementById('maxInstallments').value = product.paymentSettings.maxInstallments || '';
+            } else {
+                // Reset se não houver configurações
+                document.getElementById('pixDiscount').value = '';
+                document.getElementById('maxInstallments').value = '';
+            }
+            
             document.getElementById('productModal').classList.add('active');
         }
 
@@ -551,15 +685,24 @@
             
             try {
                 const productData = {
-                    name: document.getElementById('productName').value,
-                    price: parseFloat(document.getElementById('productPrice').value),
-                    image: document.getElementById('productImage').value,
-                    description: document.getElementById('productDescription').value,
-                    category: document.getElementById('productCategory').value,
-                    sizes: document.getElementById('productSizes').value.split(',').map(s => s.trim()),
-                    colors: document.getElementById('productColors').value.split(',').map(c => c.trim()),
+                    name: document.getElementById('productName').value || 'Produto sem nome',
+                    price: parseFloat(document.getElementById('productPrice').value) || 0,
+                    image: document.getElementById('productImage').value || 'https://via.placeholder.com/300x200?text=Sem+Imagem',
+                    description: document.getElementById('productDescription').value || 'Sem descrição',
+                    category: document.getElementById('productCategory').value || 'geral',
+                    sizes: document.getElementById('productSizes').value ? 
+                        document.getElementById('productSizes').value.split(',').map(s => s.trim()).filter(s => s) : 
+                        ['Único'],
+                    colors: document.getElementById('productColors').value ? 
+                        document.getElementById('productColors').value.split(',').map(c => c.trim()).filter(c => c) : 
+                        ['Não especificado'],
                     createdAt: new Date(),
-                    updatedAt: new Date()
+                    updatedAt: new Date(),
+                    // Configurações de pagamento
+                    paymentSettings: {
+                        pixDiscount: parseFloat(document.getElementById('pixDiscount').value) || 0,
+                        maxInstallments: parseInt(document.getElementById('maxInstallments').value) || 0
+                    }
                 };
 
                 if (editingProductId) {
@@ -680,6 +823,248 @@
                 'pijama': 'Pijamas'
             };
             return names[category] || category;
+        }
+
+        // ========== SISTEMA DE FORMAS DE PAGAMENTO ==========
+
+        // Carregar formas de pagamento do localStorage
+        function loadPaymentMethods() {
+            const savedMethods = localStorage.getItem('laModaCristaPaymentMethods');
+            if (savedMethods) {
+                paymentMethods = JSON.parse(savedMethods);
+            } else {
+                // Formas de pagamento padrão
+                paymentMethods = [
+                    {
+                        id: 'pix_default',
+                        name: 'PIX',
+                        type: 'pix',
+                        discount: 10,
+                        description: 'PIX com 10% de desconto',
+                        active: true
+                    },
+                    {
+                        id: 'credit_default',
+                        name: 'Cartão de Crédito',
+                        type: 'credit',
+                        installments: 6,
+                        description: 'Cartão de Crédito',
+                        active: true
+                    },
+                    {
+                        id: 'debit_default',
+                        name: 'Cartão de Débito',
+                        type: 'debit',
+                        description: 'Cartão de Débito',
+                        active: true
+                    }
+                ];
+                savePaymentMethods();
+            }
+            displayPaymentMethods();
+        }
+
+        // Salvar formas de pagamento no localStorage
+        function savePaymentMethods() {
+            localStorage.setItem('laModaCristaPaymentMethods', JSON.stringify(paymentMethods));
+        }
+
+        // Abrir modal de formas de pagamento
+        function openPaymentMethodsModal() {
+            editingPayment = null;
+            document.getElementById('paymentForm').reset();
+            document.getElementById('discountGroup').style.display = 'none';
+            document.getElementById('installmentsGroup').style.display = 'none';
+            document.getElementById('paymentMethodsModal').classList.add('active');
+        }
+
+        // Fechar modal de formas de pagamento
+        function closePaymentMethodsModal() {
+            document.getElementById('paymentMethodsModal').classList.remove('active');
+            editingPayment = null;
+        }
+
+        // Atualizar campos do formulário de pagamento baseado no tipo
+        function updatePaymentFields() {
+            const type = document.getElementById('paymentType').value;
+            const discountGroup = document.getElementById('discountGroup');
+            const installmentsGroup = document.getElementById('installmentsGroup');
+            
+            // Esconder todos os grupos
+            discountGroup.style.display = 'none';
+            installmentsGroup.style.display = 'none';
+            
+            // Mostrar grupos baseado no tipo
+            if (type === 'pix') {
+                discountGroup.style.display = 'block';
+            } else if (type === 'credit') {
+                installmentsGroup.style.display = 'block';
+            }
+        }
+
+        // Lidar com envio do formulário de pagamento
+        function handlePaymentFormSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                id: 'payment_' + Date.now(),
+                name: document.getElementById('paymentName').value.trim(),
+                type: document.getElementById('paymentType').value,
+                description: document.getElementById('paymentDescription').value.trim(),
+                active: document.getElementById('paymentActive').checked
+            };
+            
+            // Adicionar campos específicos baseado no tipo
+            if (formData.type === 'pix') {
+                formData.discount = parseFloat(document.getElementById('paymentDiscount').value);
+                if (!formData.discount && formData.discount !== 0) {
+                    showStatus('Por favor, informe o desconto para PIX!', 'error');
+                    return;
+                }
+            } else if (formData.type === 'credit') {
+                formData.installments = parseInt(document.getElementById('paymentInstallments').value);
+                if (!formData.installments) {
+                    showStatus('Por favor, informe o número de parcelas!', 'error');
+                    return;
+                }
+            }
+            
+            // Validar dados obrigatórios
+            if (!formData.name || !formData.type || !formData.description) {
+                showStatus('Por favor, preencha todos os campos obrigatórios!', 'error');
+                return;
+            }
+            
+            // Adicionar ou editar forma de pagamento
+            if (editingPayment) {
+                updatePaymentMethod(editingPayment.id, formData);
+                showStatus('Forma de pagamento atualizada com sucesso!', 'success');
+            } else {
+                addPaymentMethod(formData);
+                showStatus('Forma de pagamento adicionada com sucesso!', 'success');
+            }
+            
+            // Limpar formulário
+            clearPaymentForm();
+            editingPayment = null;
+            
+            // Atualizar exibição
+            displayPaymentMethods();
+        }
+
+        // Adicionar forma de pagamento
+        function addPaymentMethod(paymentData) {
+            paymentMethods.push(paymentData);
+            savePaymentMethods();
+        }
+
+        // Atualizar forma de pagamento
+        function updatePaymentMethod(oldId, newData) {
+            const index = paymentMethods.findIndex(p => p.id === oldId);
+            if (index !== -1) {
+                paymentMethods[index] = { ...newData, id: oldId };
+                savePaymentMethods();
+            }
+        }
+
+        // Remover forma de pagamento
+        function removePaymentMethod(id) {
+            paymentMethods = paymentMethods.filter(p => p.id !== id);
+            savePaymentMethods();
+        }
+
+        // Exibir formas de pagamento
+        function displayPaymentMethods() {
+            const container = document.getElementById('paymentMethodsList');
+            container.innerHTML = '';
+            
+            if (paymentMethods.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; font-size: 1.2rem;">Nenhuma forma de pagamento configurada ainda.</p>';
+                return;
+            }
+            
+            paymentMethods.forEach(payment => {
+                const paymentCard = createPaymentCard(payment);
+                container.appendChild(paymentCard);
+            });
+        }
+
+        // Criar card da forma de pagamento
+        function createPaymentCard(payment) {
+            const card = document.createElement('div');
+            card.className = 'product-card-admin';
+            
+            let details = '';
+            if (payment.type === 'pix') {
+                details = `<strong>Desconto:</strong> ${payment.discount}%`;
+            } else if (payment.type === 'credit') {
+                details = `<strong>Parcelas:</strong> até ${payment.installments}x`;
+            } else {
+                details = '<strong>Tipo:</strong> À vista';
+            }
+            
+            card.innerHTML = `
+                <div class="product-info-admin">
+                    <h3>${payment.name}</h3>
+                    <p><strong>Tipo:</strong> ${payment.type.toUpperCase()}</p>
+                    <p>${details}</p>
+                    <p><strong>Descrição:</strong> ${payment.description}</p>
+                    <p><strong>Status:</strong> ${payment.active ? '✅ Ativo' : '❌ Inativo'}</p>
+                </div>
+                <div class="product-actions">
+                    <button class="btn-edit" onclick="editPaymentMethod('${payment.id}')">✏️ Editar</button>
+                    <button class="btn-delete" onclick="deletePaymentMethod('${payment.id}')">🗑️ Excluir</button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Editar forma de pagamento
+        function editPaymentMethod(id) {
+            const payment = paymentMethods.find(p => p.id === id);
+            if (payment) {
+                // Preencher formulário
+                document.getElementById('paymentName').value = payment.name;
+                document.getElementById('paymentType').value = payment.type;
+                document.getElementById('paymentDescription').value = payment.description;
+                document.getElementById('paymentActive').checked = payment.active;
+                
+                // Atualizar campos específicos
+                updatePaymentFields();
+                
+                if (payment.discount !== undefined) {
+                    document.getElementById('paymentDiscount').value = payment.discount;
+                }
+                if (payment.installments !== undefined) {
+                    document.getElementById('paymentInstallments').value = payment.installments;
+                }
+                
+                // Marcar como editando
+                editingPayment = payment;
+            }
+        }
+
+        // Excluir forma de pagamento
+        function deletePaymentMethod(id) {
+            if (confirm('Tem certeza que deseja excluir esta forma de pagamento?')) {
+                removePaymentMethod(id);
+                displayPaymentMethods();
+                showStatus('Forma de pagamento excluída com sucesso!', 'success');
+            }
+        }
+
+        // Limpar formulário de pagamento
+        function clearPaymentForm() {
+            document.getElementById('paymentForm').reset();
+            document.getElementById('discountGroup').style.display = 'none';
+            document.getElementById('installmentsGroup').style.display = 'none';
+        }
+
+        // Forçar reload da página
+        function forceReload() {
+            localStorage.removeItem('adminVersion');
+            window.location.reload(true);
         }
     </script>
 </body>
