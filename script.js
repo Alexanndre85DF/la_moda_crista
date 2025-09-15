@@ -1,4 +1,4 @@
-// Versão: 20250103w - Texto PIX Simples
+// Versão: 20250103x - Descrição abaixo do preço
 // Global variables
 // Load cart from localStorage or initialize empty
 let cart = JSON.parse(localStorage.getItem('laModaCristaCart')) || [];
@@ -42,9 +42,9 @@ function createProductCard(product) {
         </div>
         <div class="product-card-info">
             <h3>${product.name}</h3>
-            ${product.description && product.description !== 'Sem descrição' ? `<p class="product-description">${product.description}</p>` : ''}
             ${product.colors && product.colors.length > 0 && product.colors[0] !== 'Não especificado' ? `<p class="product-colors"><strong>Cores:</strong> ${product.colors.join(', ')}</p>` : ''}
             <p class="price">R$ ${formatPrice(product.price)}</p>
+            ${product.description && product.description !== 'Sem descrição' ? `<p class="product-description">${product.description}</p>` : ''}
             
             ${product.paymentSettings && product.paymentSettings.pixDiscount > 0 ? 
                 `<p style="background: #e8f5e8; color: #4CAF50; padding: 8px; border-radius: 5px; text-align: center; margin: 10px 0; font-weight: bold;">

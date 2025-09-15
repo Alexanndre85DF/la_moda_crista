@@ -273,6 +273,74 @@ body {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+/* Banner images for each category */
+.category-header.vestido {
+    background: url('img/vestido-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+.category-header.blusa {
+    background: url('img/blusa-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+.category-header.calca {
+    background: url('img/calca-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+.category-header.camisa {
+    background: url('img/camisa-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+.category-header.conjunto {
+    background: url('img/conjunto-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+.category-header.macacao {
+    background: url('img/macacao-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+.category-header.pijama {
+    background: url('img/pijama-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+.category-header.saia-jeans {
+    background: url('img/saia-jeans-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+.category-header.saia-social {
+    background: url('img/saia-social-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+.category-header.tshirt {
+    background: url('img/tshirt-banner.jpg') center/cover;
+    background-attachment: fixed;
+}
+
+/* Overlay para melhor legibilidade do texto */
+.category-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.category-header .container {
+    position: relative;
+    z-index: 2;
+}
+
 .category-header h1 {
     font-size: 3rem;
     margin-bottom: 1rem;
