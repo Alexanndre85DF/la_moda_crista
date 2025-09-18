@@ -257,6 +257,64 @@
         .filter-btn i {
             font-size: 0.8rem;
         }
+        
+        .image-upload-container {
+            border: 2px dashed #d4a5c7;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .image-upload-container:hover {
+            border-color: #b887a9;
+            background: #f5f5f5;
+        }
+        
+        .image-upload-container input[type="file"] {
+            display: none;
+        }
+        
+        .image-upload-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        .image-upload-hint {
+            font-size: 0.9rem;
+            color: #999;
+        }
+        
+        .image-preview-container {
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        .image-preview-container img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-remove-image {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-remove-image:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -382,8 +440,22 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="productImage">URL da Imagem</label>
-                    <input type="url" id="productImage" placeholder="https://exemplo.com/imagem.jpg">
+                    <label for="productImage">Imagem do Produto</label>
+                    <div class="image-upload-container">
+                        <input type="file" id="productImageFile" accept="image/*" onchange="handleImageUpload(event)">
+                        <div class="image-upload-info">
+                            <p>📁 Clique para selecionar uma imagem</p>
+                            <p class="image-upload-hint">Formatos aceitos: JPG, PNG, GIF (máx. 5MB)</p>
+                        </div>
+                    </div>
+                    <div class="image-preview-container" id="imagePreviewContainer" style="display: none;">
+                        <img id="imagePreview" src="" alt="Preview da imagem">
+                        <button type="button" class="btn-remove-image" onclick="removeImage()">🗑️ Remover Imagem</button>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="productImageUrl">Ou cole uma URL da imagem:</label>
+                        <input type="url" id="productImageUrl" placeholder="https://exemplo.com/imagem.jpg">
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -529,6 +601,7 @@
         let currentFilter = 'all';
         let paymentMethods = [];
         let editingPayment = null;
+        let uploadedImageData = null; // Para armazenar dados da imagem uploadada
 
         // Initialize admin
         document.addEventListener('DOMContentLoaded', function() {
@@ -644,6 +717,9 @@
             document.getElementById('pixDiscount').value = '';
             document.getElementById('maxInstallments').value = '';
             
+            // Limpar campos de imagem
+            removeImage();
+            
             document.getElementById('productModal').classList.add('active');
         }
 
@@ -654,13 +730,24 @@
             editingProductId = productId;
             document.getElementById('modalTitle').textContent = 'Editar Produto';
             
+            // Limpar campos de imagem primeiro
+            removeImage();
+            
             document.getElementById('productName').value = product.name;
             document.getElementById('productPrice').value = product.price;
-            document.getElementById('productImage').value = product.image;
             document.getElementById('productDescription').value = product.description;
             document.getElementById('productCategory').value = product.category;
             document.getElementById('productSizes').value = product.sizes.join(', ');
             document.getElementById('productColors').value = product.colors.join(', ');
+            
+            // Se a imagem for uma URL externa, mostrar no campo de URL
+            if (product.image && !product.image.startsWith('data:')) {
+                document.getElementById('productImageUrl').value = product.image;
+            } else if (product.image && product.image.startsWith('data:')) {
+                // Se for uma imagem base64, mostrar preview
+                uploadedImageData = product.image;
+                showImagePreview(product.image);
+            }
             
             // Carregar configurações de pagamento
             if (product.paymentSettings) {
@@ -683,11 +770,16 @@
         async function handleProductSubmit(e) {
             e.preventDefault();
             
+            // Validar imagem primeiro
+            if (!validateImage()) {
+                return;
+            }
+            
             try {
                 const productData = {
                     name: document.getElementById('productName').value || 'Produto sem nome',
                     price: parseFloat(document.getElementById('productPrice').value) || 0,
-                    image: document.getElementById('productImage').value || 'https://via.placeholder.com/300x200?text=Sem+Imagem',
+                    image: getImageUrl(), // Usar nova função para obter URL da imagem
                     description: document.getElementById('productDescription').value || 'Sem descrição',
                     category: document.getElementById('productCategory').value || 'geral',
                     sizes: document.getElementById('productSizes').value ? 
@@ -1065,6 +1157,83 @@
         function forceReload() {
             localStorage.removeItem('adminVersion');
             window.location.reload(true);
+        }
+
+        // ========== SISTEMA DE UPLOAD DE IMAGENS ==========
+
+        // Lidar com upload de imagem
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            // Validar tamanho do arquivo (máximo 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showStatus('Arquivo muito grande! Máximo permitido: 5MB', 'error');
+                return;
+            }
+            
+            // Validar tipo de arquivo
+            if (!file.type.startsWith('image/')) {
+                showStatus('Por favor, selecione apenas arquivos de imagem!', 'error');
+                return;
+            }
+            
+            // Converter para base64
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                uploadedImageData = e.target.result;
+                showImagePreview(e.target.result);
+                showStatus('Imagem carregada com sucesso!', 'success');
+            };
+            reader.onerror = function() {
+                showStatus('Erro ao carregar a imagem!', 'error');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Mostrar preview da imagem
+        function showImagePreview(imageData) {
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const previewImage = document.getElementById('imagePreview');
+            
+            previewImage.src = imageData;
+            previewContainer.style.display = 'block';
+            
+            // Limpar campo de URL se houver imagem uploadada
+            document.getElementById('productImageUrl').value = '';
+        }
+
+        // Remover imagem selecionada
+        function removeImage() {
+            uploadedImageData = null;
+            document.getElementById('productImageFile').value = '';
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+            document.getElementById('productImageUrl').value = '';
+        }
+
+        // Obter URL da imagem (uploadada ou URL externa)
+        function getImageUrl() {
+            // Priorizar imagem uploadada
+            if (uploadedImageData) {
+                return uploadedImageData;
+            }
+            
+            // Se não houver imagem uploadada, usar URL externa
+            const urlInput = document.getElementById('productImageUrl');
+            return urlInput.value.trim();
+        }
+
+        // Validar se há imagem selecionada
+        function validateImage() {
+            const imageUrl = getImageUrl();
+            if (!imageUrl) {
+                showStatus('Por favor, selecione uma imagem ou informe uma URL!', 'error');
+                return false;
+            }
+            return true;
         }
     </script>
 </body>
