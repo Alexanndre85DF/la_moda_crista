@@ -3,6 +3,7 @@ let products = {};
 let editingProduct = null;
 let paymentMethods = [];
 let editingPayment = null;
+let uploadedImageData = null; // Para armazenar dados da imagem uploadada
 
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
@@ -123,11 +124,16 @@ function showTab(tabName) {
 function handleFormSubmit(e) {
     e.preventDefault();
     
+    // Validar imagem primeiro
+    if (!validateImage()) {
+        return;
+    }
+    
     const formData = {
         id: document.getElementById('productId').value.trim(),
         name: document.getElementById('productName').value.trim(),
         price: parseFloat(document.getElementById('productPrice').value),
-        image: document.getElementById('productImage').value.trim(),
+        image: getImageUrl(), // Usar nova função para obter URL da imagem
         description: document.getElementById('productDescription').value.trim(),
         sizes: document.getElementById('productSizes').value.split(',').map(s => s.trim()),
         colors: document.getElementById('productColors').value.split(',').map(c => c.trim()),
@@ -273,15 +279,26 @@ function editProduct(id) {
     }
     
     if (product) {
+        // Limpar campos de imagem primeiro
+        removeImage();
+        
         // Preencher formulário
         document.getElementById('productId').value = product.id;
         document.getElementById('productName').value = product.name;
         document.getElementById('productPrice').value = product.price;
-        document.getElementById('productImage').value = product.image;
         document.getElementById('productDescription').value = product.description;
         document.getElementById('productSizes').value = product.sizes.join(', ');
         document.getElementById('productColors').value = product.colors.join(', ');
         document.getElementById('productCategory').value = product.category || '';
+        
+        // Se a imagem for uma URL externa, mostrar no campo de URL
+        if (product.image && !product.image.startsWith('data:')) {
+            document.getElementById('productImageUrl').value = product.image;
+        } else if (product.image && product.image.startsWith('data:')) {
+            // Se for uma imagem base64, mostrar preview
+            uploadedImageData = product.image;
+            showImagePreview(product.image);
+        }
         
         // Marcar como editando
         editingProduct = product;
@@ -307,6 +324,7 @@ function deleteProduct(id) {
 // Limpar formulário
 function clearForm() {
     document.getElementById('productForm').reset();
+    removeImage(); // Limpar também os campos de imagem
 }
 
 // Mostrar mensagem
@@ -559,4 +577,81 @@ function showPaymentMessage(text, type) {
     setTimeout(() => {
         messageDiv.innerHTML = '';
     }, 3000);
+}
+
+// ========== SISTEMA DE UPLOAD DE IMAGENS ==========
+
+// Lidar com upload de imagem
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    
+    if (!file) {
+        return;
+    }
+    
+    // Validar tamanho do arquivo (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showMessage('Arquivo muito grande! Máximo permitido: 5MB', 'error');
+        return;
+    }
+    
+    // Validar tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+        showMessage('Por favor, selecione apenas arquivos de imagem!', 'error');
+        return;
+    }
+    
+    // Converter para base64
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        uploadedImageData = e.target.result;
+        showImagePreview(e.target.result);
+        showMessage('Imagem carregada com sucesso!', 'success');
+    };
+    reader.onerror = function() {
+        showMessage('Erro ao carregar a imagem!', 'error');
+    };
+    reader.readAsDataURL(file);
+}
+
+// Mostrar preview da imagem
+function showImagePreview(imageData) {
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const previewImage = document.getElementById('imagePreview');
+    
+    previewImage.src = imageData;
+    previewContainer.style.display = 'block';
+    
+    // Limpar campo de URL se houver imagem uploadada
+    document.getElementById('productImageUrl').value = '';
+}
+
+// Remover imagem selecionada
+function removeImage() {
+    uploadedImageData = null;
+    document.getElementById('productImageFile').value = '';
+    document.getElementById('imagePreviewContainer').style.display = 'none';
+    document.getElementById('productImageUrl').value = '';
+}
+
+// Obter URL da imagem (uploadada ou URL externa)
+function getImageUrl() {
+    // Priorizar imagem uploadada
+    if (uploadedImageData) {
+        return uploadedImageData;
+    }
+    
+    // Se não houver imagem uploadada, usar URL externa
+    const urlInput = document.getElementById('productImageUrl');
+    return urlInput.value.trim();
+}
+
+// Validar se há imagem selecionada
+function validateImage() {
+    const imageUrl = getImageUrl();
+    if (!imageUrl) {
+        showMessage('Por favor, selecione uma imagem ou informe uma URL!', 'error');
+        return false;
+    }
+    return true;
 }
